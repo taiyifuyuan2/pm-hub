@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PM Hub</title>
+    <script>
+      // 描画前にテーマを決めて、ダークモードの人に白い画面が一瞬出る（ちらつき）のを防ぐ。
+      // 保存済みの設定（auto / light / dark）を読み、auto なら OS の設定に従う。
+      (function () {
+        var theme = "auto";
+        try {
+          var saved = JSON.parse(localStorage.getItem("pm-hub-ui-settings") || "null");
+          var t = saved && saved.state && saved.state.theme;
+          if (t === "light" || t === "dark") theme = t;
+        } catch (e) {}
+        var dark = theme === "dark" || (theme === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+      })();
+    </script>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
