@@ -2,12 +2,15 @@ import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { config } from "../config";
+import { computeFreeSlots, type BusyInterval } from "./calendar";
 
 // 読み取りと、下書きの作成。送信・削除の API は呼ばない（gmail.compose は送信も許す権限だが、使わない）
 const SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/gmail.compose",
   "https://www.googleapis.com/auth/userinfo.email",
+  // 予定の「埋まっている時間帯」だけが分かる権限（予定の題名や内容は読めない）
+  "https://www.googleapis.com/auth/calendar.freebusy",
 ];
 const AUTH_URI = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URI = "https://oauth2.googleapis.com/token";
@@ -24,6 +27,8 @@ interface Tokens {
   refresh_token: string;
   expires_at: number;
   email?: string;
+  /** 許可された権限（空白区切り）。カレンダーの権限を足す前にログインした場合は含まれない */
+  scope?: string;
 }
 
 /** google-client.json、またはダウンロードしたままの client_secret_*.json を読む */
@@ -61,7 +66,12 @@ export const redirectUri = () => `http://127.0.0.1:${config.port}/api/google/cal
 
 export function googleStatus() {
   const tokens = loadTokens();
-  return { configured: loadClient() !== null, connected: tokens !== null, email: tokens?.email ?? null };
+  return {
+    configured: loadClient() !== null,
+    connected: tokens !== null,
+    email: tokens?.email ?? null,
+    calendar: tokens?.scope?.includes("calendar.freebusy") ?? false,
+  };
 }
 
 export function googleLogout() {
@@ -123,6 +133,7 @@ export async function finishLogin(code: string, state: string) {
     access_token: String(json.access_token),
     refresh_token: String(json.refresh_token),
     expires_at: Date.now() + Number(json.expires_in) * 1000,
+    scope: typeof json.scope === "string" ? json.scope : undefined,
   };
   try {
     const me = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
@@ -285,4 +296,41 @@ export async function createDraft(input: MailInput) {
 export async function sendMail(input: MailInput) {
   const sent = await gmail<{ id: string }>("/messages/send", { method: "POST", body: JSON.stringify(mimeMessage(input)) });
   return { id: sent.id };
+}
+
+// ---------- Google カレンダー（空き時間） ----------
+
+let freeSlotsCache: { at: number; days: number; value: string } | undefined;
+
+/**
+ * これから days 日間の「空き時間」を、日ごとの行にして返す（日本時間・9〜21 時）。
+ * カレンダーの権限がなければ null。予定の題名や内容は読まない（埋まっている時間帯だけ）。
+ */
+export async function getFreeSlots(days = 14): Promise<string | null> {
+  const tokens = loadTokens();
+  if (!tokens?.scope?.includes("calendar.freebusy")) return null;
+  if (freeSlotsCache && freeSlotsCache.days === days && Date.now() - freeSlotsCache.at < 60_000) return freeSlotsCache.value;
+
+  const now = Date.now();
+  const res = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      timeMin: new Date(now).toISOString(),
+      timeMax: new Date(now + (days + 1) * 86_400_000).toISOString(),
+      timeZone: "Asia/Tokyo",
+      items: [{ id: "primary" }],
+    }),
+  });
+  const json = (await res.json().catch(() => null)) as {
+    calendars?: { primary?: { busy?: BusyInterval[]; errors?: { reason?: string }[] } };
+    error?: { message?: string };
+  } | null;
+  if (!res.ok) throw new Error(json?.error?.message ?? `Calendar API: HTTP ${res.status}`);
+  const primary = json?.calendars?.primary;
+  if (primary?.errors?.length) throw new Error(`カレンダーを読めませんでした（${primary.errors[0].reason}）`);
+
+  const value = computeFreeSlots(primary?.busy ?? [], { now, days }).join("\n");
+  freeSlotsCache = { at: now, days, value };
+  return value;
 }

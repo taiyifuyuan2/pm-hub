@@ -5,7 +5,6 @@ import { AppSkeleton } from "./components/Skeleton";
 import { ToastHost } from "./components/ToastHost";
 import { ChatPanel } from "./features/chat/ChatPanel";
 import { ContextPanel } from "./features/context/ContextPanel";
-import { InboxDialog } from "./features/inbox/InboxDialog";
 import { InsightsDialog } from "./features/insights/InsightsDialog";
 import { TaskListPanel } from "./features/tasks/TaskListPanel";
 import { API_BASE } from "./lib/api";
@@ -25,8 +24,6 @@ function App() {
   const shortcutsOpen = useAppStore((s) => s.shortcutsOpen);
   const setShortcutsOpen = useAppStore((s) => s.setShortcutsOpen);
 
-  const inboxOpen = useInboxStore((s) => s.open);
-  const setInboxOpen = useInboxStore((s) => s.setOpen);
   const pollInbox = useInboxStore((s) => s.poll);
 
   useThemeEffect();
@@ -42,7 +39,7 @@ function App() {
     return () => clearTimeout(timer);
   }, [load, hydrate]);
 
-  // 受信トレイは、サーバーが自動で作った返信案を取りに行く。画面を隠していても動く
+  // サーバーが新着メッセージから自動で作ったタスクを取りに行く。画面を隠していても動く
   useEffect(() => {
     if (load.status !== "ready") return;
     void pollInbox();
@@ -75,7 +72,6 @@ function App() {
     <>
       <AppLayout left={<TaskListPanel />} center={<ChatPanel />} right={<ContextPanel />} />
       {insightsOpen && <InsightsDialog onClose={() => setInsightsOpen(false)} />}
-      {inboxOpen && <InboxDialog onClose={() => setInboxOpen(false)} />}
       {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
       <ToastHost />
     </>

@@ -4,12 +4,14 @@ import type {
   PermissionResponseRequest,
   PermissionRulesResponse,
 } from "../../shared/agent";
-import type { InboxResponse, Memo, MessageSource, MessageThread, Suggestion, Task, WatchedChat } from "../types";
+import type { InboxResponse, Memo, MessageSource, MessageThread, Task, WatchedChat } from "../types";
 
 export interface GoogleStatus {
   configured: boolean;
   connected: boolean;
   email: string | null;
+  /** カレンダー（空き時間）の権限があるか。なければ、もう一度ログインが必要 */
+  calendar: boolean;
 }
 export interface GmailThread {
   id: string;
@@ -96,19 +98,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ chatID }),
     }),
-  beeperDraft: (body: { chat: string; text: string }) =>
+  beeperDraft: (body: { chat: string; chatID?: string; text: string }) =>
     request<{ chatTitle: string; network: string }>("/api/beeper/draft", { method: "POST", body: JSON.stringify(body) }),
-  inbox: () => request<InboxResponse>("/api/inbox"),
+  inbox: (after?: number) => request<InboxResponse>(`/api/inbox${after === undefined ? "" : `?after=${after}`}`),
   inboxPaused: (paused: boolean) => request<InboxResponse>("/api/inbox/paused", { method: "PUT", body: JSON.stringify({ paused }) }),
   inboxWatch: (chat: WatchedChat, enabled: boolean) =>
     request<InboxResponse>("/api/inbox/watch", { method: "PUT", body: JSON.stringify({ ...chat, enabled }) }),
-  inboxSend: (id: string, text: string) =>
-    request<Suggestion>(`/api/inbox/${encodeURIComponent(id)}/send`, { method: "POST", body: JSON.stringify({ text }) }),
-  inboxDraft: (id: string, text: string) =>
-    request<Suggestion>(`/api/inbox/${encodeURIComponent(id)}/draft`, { method: "POST", body: JSON.stringify({ text }) }),
-  inboxRegenerate: (id: string) => request<Suggestion>(`/api/inbox/${encodeURIComponent(id)}/regenerate`, { method: "POST" }),
-  inboxDismiss: (id: string) => request<Suggestion>(`/api/inbox/${encodeURIComponent(id)}/dismiss`, { method: "POST" }),
-  beeperSend: (body: { chat: string; text: string }) =>
+  beeperSend: (body: { chat: string; chatID?: string; text: string }) =>
     request<{ chatTitle: string; network: string }>("/api/beeper/send", { method: "POST", body: JSON.stringify(body) }),
   gmailSend: (body: { to: string; subject: string; body: string }) =>
     request<{ id: string }>("/api/gmail/send", { method: "POST", body: JSON.stringify(body) }),

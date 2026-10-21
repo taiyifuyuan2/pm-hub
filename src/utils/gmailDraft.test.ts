@@ -31,6 +31,14 @@ describe("parseBeeperDraft", () => {
     });
   });
 
+  it("id があれば読む（自動で作った返信案）", () => {
+    assert.deepEqual(parseBeeperDraft("chat: 岩元大貴\nid: !abc:beeper.local\n---\nOK"), {
+      chat: "岩元大貴",
+      id: "!abc:beeper.local",
+      text: "OK",
+    });
+  });
+
   it("チャット名か文面がなければ null", () => {
     assert.equal(parseBeeperDraft("---\nこんにちは"), null);
     assert.equal(parseBeeperDraft("chat: A\n---\n "), null);

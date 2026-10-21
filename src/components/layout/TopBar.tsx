@@ -1,4 +1,3 @@
-import { useInboxStore } from "../../store/inboxStore";
 import { useAppStore } from "../../store/useAppStore";
 import { NEXT_THEME, THEME_LABEL } from "../../lib/useTheme";
 import { Icon, type IconName } from "../Icon";
@@ -24,8 +23,6 @@ export function TopBar({ showLeft, showRight, onToggleLeft, onToggleRight }: Top
   const refreshing = useAppStore((s) => s.refreshing);
   const setInsightsOpen = useAppStore((s) => s.setInsightsOpen);
   const setShortcutsOpen = useAppStore((s) => s.setShortcutsOpen);
-  const setInboxOpen = useInboxStore((s) => s.setOpen);
-  const waiting = useInboxStore((s) => s.suggestions.filter((x) => x.status === "pending" || x.status === "generating").length);
 
   return (
     <header className="flex h-11 shrink-0 items-center gap-1 border-b border-line bg-canvas px-2">
@@ -57,19 +54,6 @@ export function TopBar({ showLeft, showRight, onToggleLeft, onToggleRight }: Top
         className={iconButton}
       >
         <Icon name="refresh" size={16} className={refreshing ? "animate-spin-slow" : ""} />
-      </button>
-      <button
-        onClick={() => setInboxOpen(true)}
-        aria-label={waiting > 0 ? `受信トレイを開く（対応待ち ${waiting} 件）` : "受信トレイを開く"}
-        title="受信トレイ（Alt+M）"
-        className={`${iconButton} relative`}
-      >
-        <Icon name="inbox" size={16} />
-        {waiting > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex min-w-4 animate-pop items-center justify-center rounded-full bg-ink px-1 text-[10px] font-semibold leading-4 text-on-ink">
-            {waiting}
-          </span>
-        )}
       </button>
       <button onClick={() => setInsightsOpen(true)} aria-label="概要を開く" title="概要（Alt+I）" className={iconButton}>
         <Icon name="chart" size={16} />

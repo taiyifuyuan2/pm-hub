@@ -147,6 +147,11 @@ const MIGRATIONS: { version: number; sql: string }[] = [
       );
     `,
   },
+  {
+    // 新着メッセージから自動で作ったタスクを、チャットに結びつける（続きは同じタスクに足す）
+    version: 7,
+    sql: `ALTER TABLE watched_chats ADD COLUMN taskId TEXT;`,
+  },
 ];
 
 export const LATEST_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

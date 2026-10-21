@@ -16,6 +16,8 @@ export function BeeperPanel({ taskId }: { taskId: string }) {
   const importChat = useAppStore((s) => s.importBeeperChat);
   const watched = useInboxStore((s) => s.watched);
   const setWatch = useInboxStore((s) => s.setWatch);
+  const paused = useInboxStore((s) => s.paused);
+  const setPaused = useInboxStore((s) => s.setPaused);
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<BeeperStatus | null>(null);
   const [token, setToken] = useState("");
@@ -112,6 +114,15 @@ export function BeeperPanel({ taskId }: { taskId: string }) {
                   切断
                 </button>
               </div>
+              <div className="flex items-center gap-2 rounded-lg bg-hover px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-fg">新着を自動でタスクにする</p>
+                  <p className="text-[11px] leading-snug text-subtle">
+                    {paused ? "一時停止中です" : watched.length === 0 ? "下のチャットで「自動タスク化」をオンにすると始まります" : `${watched.length} 件のチャットを見張っています`}
+                  </p>
+                </div>
+                <Switch checked={!paused} onChange={(on) => void setPaused(!on)} label="新着を自動でタスクにする" />
+              </div>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -134,12 +145,12 @@ export function BeeperPanel({ taskId }: { taskId: string }) {
                         {c.unreadCount > 0 ? ` ・ 未読 ${c.unreadCount}` : ""}
                       </p>
                     </div>
-                    <label className="flex shrink-0 items-center gap-1 text-[10px] text-subtle" title="新しいメッセージが届いたら、自動で返信案を作ります（送信はしません）">
-                      自動返信案
+                    <label className="flex shrink-0 items-center gap-1 text-[10px] text-subtle" title="新しいメッセージが届いたら、タスクを作って返信案を用意します（送信はしません）">
+                      自動タスク化
                       <Switch
                         checked={watched.some((w) => w.chatID === c.id)}
                         onChange={(on) => void setWatch({ chatID: c.id, title: c.title, network: c.network }, on)}
-                        label={`${c.title} の自動返信案`}
+                        label={`${c.title} の自動タスク化`}
                       />
                     </label>
                     <button

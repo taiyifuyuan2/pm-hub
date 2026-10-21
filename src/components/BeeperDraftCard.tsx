@@ -15,7 +15,7 @@ export function BeeperDraftCard({ source }: { source: string }) {
   const save = async () => {
     setState("saving");
     try {
-      await api.beeperDraft({ chat: parsed.chat, text });
+      await api.beeperDraft({ chat: parsed.chat, chatID: parsed.id, text });
       setState("saved");
       toast.success(`「${parsed.chat}」の入力欄に入れました（送信はされていません）`);
     } catch (err) {
@@ -50,7 +50,7 @@ export function BeeperDraftCard({ source }: { source: string }) {
           target={parsed.chat}
           disabled={!text.trim()}
           onSend={async () => {
-            await api.beeperSend({ chat: parsed.chat, text });
+            await api.beeperSend({ chat: parsed.chat, chatID: parsed.id, text });
           }}
           onError={(err) => toast.error(err instanceof Error ? err.message : String(err))}
         />

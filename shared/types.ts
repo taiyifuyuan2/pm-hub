@@ -87,26 +87,7 @@ export interface MessageThread {
 
 export type ContextTab = "memo" | "browser" | "messages";
 
-// ---------- 受信トレイ（自動の返信案） ----------
-
-export type SuggestionStatus = "generating" | "pending" | "sent" | "dismissed" | "error";
-
-export interface Suggestion {
-  id: string;
-  chatID: string;
-  chatTitle: string;
-  network: string;
-  /** 返信の対象になった、相手の最新のメッセージ */
-  incoming: string;
-  incomingAt: string;
-  draft: string;
-  /** AI からの補足（事実の確認が必要、など） */
-  note?: string;
-  status: SuggestionStatus;
-  error?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+// ---------- 新着メッセージの自動タスク化 ----------
 
 export interface WatchedChat {
   chatID: string;
@@ -114,8 +95,18 @@ export interface WatchedChat {
   network: string;
 }
 
+/** サーバーが自動でやったこと。画面は、これを見て一覧を更新し、新着を知らせる */
+export interface AutoTaskEvent {
+  id: number;
+  /** created: 新しいタスク / updated: 既存のタスクに新着 / draft: 返信案ができた */
+  kind: "created" | "updated" | "draft";
+  taskId: string;
+  title: string;
+}
+
 export interface InboxResponse {
-  suggestions: Suggestion[];
+  events: AutoTaskEvent[];
+  lastEventId: number;
   watched: WatchedChat[];
   paused: boolean;
 }

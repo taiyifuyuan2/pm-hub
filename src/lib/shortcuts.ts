@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { useInboxStore } from "../store/inboxStore";
 import { useAppStore } from "../store/useAppStore";
 import { NEXT_THEME } from "./useTheme";
 
@@ -9,7 +8,6 @@ export const SHORTCUTS: { keys: string[]; label: string }[] = [
   { keys: ["Ctrl", "N"], label: "新規タスクを作成" },
   { keys: ["Alt", "↑ / ↓"], label: "前・次のタスクを選択" },
   { keys: ["Alt", "I"], label: "概要を開く" },
-  { keys: ["Alt", "M"], label: "受信トレイを開く" },
   { keys: ["Alt", "T"], label: "テーマを切り替え" },
   { keys: ["Ctrl", "Enter"], label: "メッセージを送信（入力欄で）" },
   { keys: ["/"], label: "メッセージ入力欄にフォーカス" },
@@ -50,12 +48,6 @@ export function useGlobalShortcuts() {
         if (modalOpen) return;
         e.preventDefault();
         store.setInsightsOpen(true);
-        return;
-      }
-      if (e.altKey && !mod && e.key.toLowerCase() === "m") {
-        if (modalOpen) return;
-        e.preventDefault();
-        useInboxStore.getState().setOpen(true);
         return;
       }
       if (e.altKey && !mod && e.key.toLowerCase() === "t") {

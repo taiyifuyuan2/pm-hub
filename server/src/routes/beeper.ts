@@ -1,5 +1,5 @@
 import { Router, type Response } from "express";
-import { beeperStatus, clearBeeperToken, findChatByTitle, listChats, readChat, saveBeeperToken, sendChatMessage, setChatDraft } from "../beeper/beeper";
+import { beeperStatus, clearBeeperToken, findChatByTitle, listChats, readChat, saveBeeperToken, sendChatMessage, setChatDraft, setChatDraftById } from "../beeper/beeper";
 import { messagesRepo, tasksRepo } from "../db/repositories";
 import { isTaskId } from "../validation";
 
@@ -50,12 +50,13 @@ beeperRouter.post("/tasks/:taskId/beeper-import", async (req, res) => {
 
 /** チャットの入力欄に下書きを入れる（送信はしない） */
 beeperRouter.post("/beeper/draft", async (req, res) => {
-  const { chat, text } = req.body ?? {};
-  if (typeof chat !== "string" || !chat.trim() || typeof text !== "string" || !text.trim() || text.length > 20_000) {
+  const { chat, chatID, text } = req.body ?? {};
+  const hasId = typeof chatID === "string" && chatID.trim().length > 0;
+  if ((!hasId && (typeof chat !== "string" || !chat.trim())) || typeof text !== "string" || !text.trim() || text.length > 20_000) {
     return res.status(400).json({ error: "chat / text が不正です" });
   }
   try {
-    res.status(201).json(await setChatDraft(chat, text));
+    res.status(201).json(hasId ? await setChatDraftById(chatID, text) : await setChatDraft(chat, text));
   } catch (err) {
     fail(res, err);
   }
@@ -63,12 +64,14 @@ beeperRouter.post("/beeper/draft", async (req, res) => {
 
 /** チャット名を指定して送信する。画面で「送信」を押された（取り消し時間が過ぎた）ときだけ呼ばれる */
 beeperRouter.post("/beeper/send", async (req, res) => {
-  const { chat, text } = req.body ?? {};
-  if (typeof chat !== "string" || !chat.trim() || typeof text !== "string" || !text.trim() || text.length > 20_000) {
+  const { chat, chatID, text } = req.body ?? {};
+  const hasId = typeof chatID === "string" && chatID.trim().length > 0;
+  if ((!hasId && (typeof chat !== "string" || !chat.trim())) || typeof text !== "string" || !text.trim() || text.length > 20_000) {
     return res.status(400).json({ error: "chat / text が不正です" });
   }
   try {
-    const target = await findChatByTitle(chat);
+    // ID があればそれを使う（同じ名前のチャットが複数あっても、別の人に届かない）
+    const target = hasId ? { id: chatID as string, title: typeof chat === "string" ? chat : "", network: "" } : await findChatByTitle(chat);
     await sendChatMessage(target.id, text);
     res.status(201).json({ chatTitle: target.title, network: target.network });
   } catch (err) {

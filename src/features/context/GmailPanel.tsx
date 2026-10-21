@@ -113,6 +113,16 @@ export function GmailPanel({ taskId }: { taskId: string }) {
             </button>
           ) : (
             <>
+              {!status.calendar && (
+                <div className="flex items-start gap-2 rounded-lg bg-warn-soft px-3 py-2 text-[11px] leading-snug text-warn">
+                  <span className="min-w-0 flex-1">
+                    Google カレンダーの空き時間も使うには、もう一度ログインしてください（予定の題名や内容は読みません）。
+                  </span>
+                  <button type="button" onClick={login} className="shrink-0 font-medium underline">
+                    ログイン
+                  </button>
+                </div>
+              )}
               <div className="flex items-center gap-2 text-[11px] text-subtle">
                 <span className="truncate">{status.email ?? "ログイン済み"}</span>
                 <button type="button" className="ml-auto shrink-0 underline hover:text-fg" onClick={logout}>

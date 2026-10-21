@@ -1,6 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { memosRepo, messagesRepo, tasksRepo } from "../db/repositories";
+import { describeNow } from "../google/calendar";
+import { getFreeSlots } from "../google/google";
 
 const MAX_MESSAGES = 40;
 const MAX_MESSAGE_CHARS = 2000;
@@ -39,7 +41,8 @@ chat: チャットの名前（上のメッセージにある【】の中の名�
 \`\`\`
 
 - 文面は、これまでのやり取りの口調に合わせる。
-- 下書きの内容に事実の確認が必要な点（日時・金額など）があれば、本文には書かず、先にユーザーへ質問する。
+- 「いつ空いてる？」のように日程を聞かれたら、上の「空き時間」から具体的な候補を 2〜3 個挙げる。カレンダー未接続のときは、本文に書かず、先にユーザーへ質問する。
+- 日時以外でも、金額など事実の確認が必要な点があれば、本文には書かず、先にユーザーへ質問する。
 `;
 
 /**
@@ -52,6 +55,13 @@ export async function writeTaskContext(taskId: string, cwd: string): Promise<str
   if (!task) return null;
   const memo = memosRepo.all()[taskId]?.content?.trim();
   const messages = (messagesRepo.allByTask()[taskId] ?? []).slice(-MAX_MESSAGES);
+
+  let availability: string | null = null;
+  try {
+    availability = await getFreeSlots();
+  } catch {
+    // カレンダーを読めなくても、ほかの文脈は渡す
+  }
 
   const lines = [
     `# タスク: ${task.title}`,
@@ -69,6 +79,9 @@ export async function writeTaskContext(taskId: string, cwd: string): Promise<str
           (m) =>
             `### ${SOURCE_LABEL[m.source] ?? m.source} / ${m.sender} / ${m.timestamp}\n${m.content.slice(0, MAX_MESSAGE_CHARS)}`,
         )),
+    "",
+    `## 空き時間（Google カレンダー・現在 ${describeNow(Date.now())}）`,
+    availability ?? "(カレンダー未接続、または読めませんでした)",
     "",
     DRAFT_RULES,
   ];

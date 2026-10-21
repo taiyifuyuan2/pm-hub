@@ -1,5 +1,7 @@
 export interface BeeperDraft {
   chat: string;
+  /** チャットの ID（自動で作った返信案にだけ入る）。あれば名前より優先して使う */
+  id?: string;
   text: string;
 }
 
@@ -14,12 +16,15 @@ export function parseBeeperDraft(text: string): BeeperDraft | null {
   const sep = lines.findIndex((l) => l.trim() === "---");
   if (sep === -1) return null;
   let chat = "";
+  let id: string | undefined;
   for (const line of lines.slice(0, sep)) {
-    const m = /^\s*chat\s*[:：]\s*(.*)$/i.exec(line);
-    if (m) chat = m[1].trim();
+    const m = /^\s*(chat|id)\s*[:：]\s*(.*)$/i.exec(line);
+    if (!m) continue;
+    if (m[1].toLowerCase() === "chat") chat = m[2].trim();
+    else id = m[2].trim() || undefined;
   }
   const body = lines.slice(sep + 1).join("\n").trim();
-  return chat && body ? { chat, text: body } : null;
+  return chat && body ? { chat, ...(id ? { id } : {}), text: body } : null;
 }
 
 export interface GmailDraft {
