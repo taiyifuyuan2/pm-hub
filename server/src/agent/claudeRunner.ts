@@ -6,6 +6,7 @@ import type { AgentEvent } from "../../../shared/agent";
 import { config } from "../config";
 import { rulesRepo, sessionsRepo } from "../db/repositories";
 import type { RequestPermission } from "./permissions";
+import { writeTaskContext } from "./taskContext";
 import { summarizeToolInput } from "./toolSummary";
 import type { AgentRunner } from "./types";
 
@@ -52,7 +53,10 @@ export const runClaude: AgentRunner = async ({ taskId, message, model, emit, req
     if (child.stdin.writable) child.stdin.write(`${JSON.stringify(payload)}\n`);
   };
 
-  send({ type: "user", message: { role: "user", content: message }, parent_tool_use_id: null });
+  // メモ・メッセージを作業フォルダに書き出し、場所を知らせる一文を指示の前に付ける（ログには元の指示だけが残る）
+  const hint = await writeTaskContext(taskId, cwd).catch(() => null);
+  const content = hint ? `${hint}\n\n${message}` : message;
+  send({ type: "user", message: { role: "user", content }, parent_tool_use_id: null });
 
   const parser = createStreamJsonParser({
     emit,

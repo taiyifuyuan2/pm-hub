@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { copyText } from "../lib/clipboard";
+import { GmailDraftCard } from "./GmailDraftCard";
 import { Icon } from "./Icon";
 
 /** コードブロック。右上のボタンで全体をコピーできる */
@@ -42,7 +43,15 @@ export function Markdown({ children, className = "" }: { children: string; class
         remarkPlugins={[remarkGfm]}
         components={{
           a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noreferrer" />,
-          pre: ({ node: _node, children }) => <CodeBlock>{children}</CodeBlock>,
+          pre: ({ node, children }) => {
+            // ```gmail-draft は、保存ボタン付きの下書きカードにする
+            const code = node?.children[0];
+            if (code?.type === "element" && Array.isArray(code.properties?.className) && code.properties.className.includes("language-gmail-draft")) {
+              const text = code.children.map((c) => (c.type === "text" ? c.value : "")).join("");
+              return <GmailDraftCard source={text} />;
+            }
+            return <CodeBlock>{children}</CodeBlock>;
+          },
         }}
       >
         {children}
