@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { BeeperPanel } from "./BeeperPanel";
 import { GmailPanel } from "./GmailPanel";
 import { Icon, type IconName } from "../../components/Icon";
 import { PullToRefresh } from "../../components/PullToRefresh";
@@ -70,6 +71,7 @@ export function MessagesTab({ taskId }: { taskId: string }) {
   return (
     <PullToRefresh onRefresh={refresh}>
       <GmailPanel taskId={taskId} />
+      <BeeperPanel taskId={taskId} />
       <AddMessageForm taskId={taskId} />
       {messages.length === 0 ? (
         <div className="flex min-h-48 flex-col items-center justify-center px-6 py-10 text-center">

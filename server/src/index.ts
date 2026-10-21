@@ -3,6 +3,7 @@ import express from "express";
 import type { HealthResponse } from "../../shared/agent";
 import { config } from "./config";
 import { db } from "./db/database";
+import { beeperRouter } from "./routes/beeper";
 import { chatRouter } from "./routes/chat";
 import { dataRouter } from "./routes/data";
 import { googleRouter } from "./routes/google";
@@ -27,6 +28,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api", dataRouter);
 app.use("/api", chatRouter);
 app.use("/api", googleRouter);
+app.use("/api", beeperRouter);
 app.use("/api", permissionsRouter);
 
 // 外部からアクセスされないよう 127.0.0.1 のみで待ち受ける

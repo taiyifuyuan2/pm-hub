@@ -95,6 +95,7 @@ interface AppState extends UiSettings {
   addMessage: (taskId: string, input: { sender: string; content: string }) => Promise<void>;
   deleteMessage: (taskId: string, id: string) => Promise<void>;
   importGmailThread: (taskId: string, threadId: string) => Promise<number>;
+  importBeeperChat: (taskId: string, chatID: string) => Promise<number>;
   // AIログはサーバー側（/api/chat）で保存されるため、以下は画面表示用のローカル更新のみ
   addAiLog: (log: Omit<AiLog, "id" | "timestamp">) => string;
   updateAiLog: (taskId: string, logId: string, patch: Partial<Pick<AiLog, "message" | "status" | "permission">>) => void;
@@ -337,6 +338,12 @@ export const useAppStore = create<AppState>()(
 
       importGmailThread: async (taskId, threadId) => {
         const added = await api.gmailImport(taskId, threadId);
+        set((s) => ({ messages: { ...s.messages, [taskId]: [...(s.messages[taskId] ?? []), ...added] } }));
+        return added.length;
+      },
+
+      importBeeperChat: async (taskId, chatID) => {
+        const added = await api.beeperImport(taskId, chatID);
         set((s) => ({ messages: { ...s.messages, [taskId]: [...(s.messages[taskId] ?? []), ...added] } }));
         return added.length;
       },

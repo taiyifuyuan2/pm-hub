@@ -19,6 +19,20 @@ export interface GmailThread {
   date: string;
 }
 
+export interface BeeperStatus {
+  running: boolean;
+  hasToken: boolean;
+  valid: boolean;
+  networks: string[];
+}
+export interface BeeperChat {
+  id: string;
+  title: string;
+  network: string;
+  lastActivity: string;
+  unreadCount: number;
+}
+
 export const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:3001";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -73,6 +87,15 @@ export const api = {
     }),
   gmailDraft: (body: { to: string; subject: string; body: string }) =>
     request<{ id: string; url: string }>("/api/gmail/drafts", { method: "POST", body: JSON.stringify(body) }),
+  beeperStatus: () => request<BeeperStatus>("/api/beeper/status"),
+  saveBeeperToken: (token: string) => request<void>("/api/beeper/token", { method: "PUT", body: JSON.stringify({ token }) }),
+  deleteBeeperToken: () => request<void>("/api/beeper/token", { method: "DELETE" }),
+  beeperChats: (q: string) => request<BeeperChat[]>(`/api/beeper/chats?q=${encodeURIComponent(q)}`),
+  beeperImport: (taskId: string, chatID: string) =>
+    request<MessageThread[]>(`/api/tasks/${encodeURIComponent(taskId)}/beeper-import`, {
+      method: "POST",
+      body: JSON.stringify({ chatID }),
+    }),
   saveMemo: (taskId: string, content: string) =>
     request<Memo>(`/api/memos/${encodeURIComponent(taskId)}`, { method: "PUT", body: JSON.stringify({ content }) }),
 };
