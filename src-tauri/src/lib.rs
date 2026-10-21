@@ -6,7 +6,8 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::Duration;
 
-use tauri::{Manager, RunEvent};
+use tauri::webview::WebviewBuilder;
+use tauri::{Emitter, LogicalPosition, LogicalSize, Manager, RunEvent, WebviewUrl};
 
 const SERVER_PORT: u16 = 3001;
 
@@ -116,10 +117,100 @@ fn stop_server(app: &tauri::AppHandle) {
     }
 }
 
+/// 右パネルに重ねる子 WebView のラベル
+const BROWSER_LABEL: &str = "browser";
+
+#[derive(serde::Deserialize, Clone, Copy)]
+struct Bounds {
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+}
+
+fn parse_url(url: &str) -> Result<tauri::Url, String> {
+    let url: tauri::Url = url.parse().map_err(|e| format!("URL が正しくありません: {e}"))?;
+    match url.scheme() {
+        "http" | "https" => Ok(url),
+        other => Err(format!("{other}: は開けません（http / https のみ）")),
+    }
+}
+
+fn browser_webview(app: &tauri::AppHandle) -> Result<tauri::Webview, String> {
+    app.get_webview(BROWSER_LABEL).ok_or_else(|| "ブラウザがまだ開かれていません".to_string())
+}
+
+fn apply_bounds(webview: &tauri::Webview, b: Bounds) -> Result<(), String> {
+    webview.set_position(LogicalPosition::new(b.x, b.y)).map_err(|e| e.to_string())?;
+    webview.set_size(LogicalSize::new(b.width.max(1.0), b.height.max(1.0))).map_err(|e| e.to_string())
+}
+
+/// ブラウザ WebView を表示する（なければ作る）。url が None なら現在のページのまま
+#[tauri::command]
+async fn browser_show(app: tauri::AppHandle, url: Option<String>, bounds: Bounds) -> Result<(), String> {
+    if let Some(webview) = app.get_webview(BROWSER_LABEL) {
+        apply_bounds(&webview, bounds)?;
+        webview.show().map_err(|e| e.to_string())?;
+        if let Some(url) = url {
+            webview.navigate(parse_url(&url)?).map_err(|e| e.to_string())?;
+        }
+        return Ok(());
+    }
+
+    let window = app.get_window("main").ok_or("メインウィンドウが見つかりません")?;
+    let initial = match url {
+        Some(u) => parse_url(&u)?,
+        None => return Ok(()),
+    };
+    let emitter = app.clone();
+    let builder = WebviewBuilder::new(BROWSER_LABEL, WebviewUrl::External(initial)).on_navigation(move |u| {
+        let _ = emitter.emit("browser-url", u.to_string());
+        matches!(u.scheme(), "http" | "https" | "about" | "blob" | "data")
+    });
+    window
+        .add_child(builder, LogicalPosition::new(bounds.x, bounds.y), LogicalSize::new(bounds.width.max(1.0), bounds.height.max(1.0)))
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn browser_set_bounds(app: tauri::AppHandle, bounds: Bounds) -> Result<(), String> {
+    match app.get_webview(BROWSER_LABEL) {
+        Some(w) => apply_bounds(&w, bounds),
+        None => Ok(()),
+    }
+}
+
+/// タブを離れたときなど。ページは残したまま隠す
+#[tauri::command]
+fn browser_hide(app: tauri::AppHandle) -> Result<(), String> {
+    match app.get_webview(BROWSER_LABEL) {
+        Some(w) => w.hide().map_err(|e| e.to_string()),
+        None => Ok(()),
+    }
+}
+
+#[tauri::command]
+fn browser_eval(app: tauri::AppHandle, action: String) -> Result<(), String> {
+    let script = match action.as_str() {
+        "back" => "history.back()",
+        "forward" => "history.forward()",
+        "reload" => "location.reload()",
+        _ => return Err("不明な操作です".into()),
+    };
+    browser_webview(&app)?.eval(script).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![
+            browser_show,
+            browser_set_bounds,
+            browser_hide,
+            browser_eval
+        ])
         .manage(ServerProcess(Mutex::new(None)))
         .setup(|app| {
             // tauri dev では Vite プラグインが先に起動していることが多い。その場合はそれを使う
