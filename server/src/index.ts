@@ -5,6 +5,7 @@ import { config } from "./config";
 import { db } from "./db/database";
 import { chatRouter } from "./routes/chat";
 import { dataRouter } from "./routes/data";
+import { googleRouter } from "./routes/google";
 import { permissionsRouter } from "./routes/permissions";
 
 const app = express();
@@ -25,6 +26,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api", dataRouter);
 app.use("/api", chatRouter);
+app.use("/api", googleRouter);
 app.use("/api", permissionsRouter);
 
 // 外部からアクセスされないよう 127.0.0.1 のみで待ち受ける

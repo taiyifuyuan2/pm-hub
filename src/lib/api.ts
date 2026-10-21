@@ -6,6 +6,19 @@ import type {
 } from "../../shared/agent";
 import type { Memo, MessageSource, MessageThread, Task } from "../types";
 
+export interface GoogleStatus {
+  configured: boolean;
+  connected: boolean;
+  email: string | null;
+}
+export interface GmailThread {
+  id: string;
+  subject: string;
+  from: string;
+  snippet: string;
+  date: string;
+}
+
 export const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:3001";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -49,6 +62,17 @@ export const api = {
     }),
   deleteMessage: (taskId: string, id: string) =>
     request<void>(`/api/tasks/${encodeURIComponent(taskId)}/messages/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  googleStatus: () => request<GoogleStatus>("/api/google/status"),
+  googleLogin: () => request<{ url: string }>("/api/google/login", { method: "POST" }),
+  googleLogout: () => request<void>("/api/google/logout", { method: "POST" }),
+  gmailThreads: (q: string) => request<GmailThread[]>(`/api/gmail/threads?q=${encodeURIComponent(q)}`),
+  gmailImport: (taskId: string, threadId: string) =>
+    request<MessageThread[]>(`/api/tasks/${encodeURIComponent(taskId)}/gmail-import`, {
+      method: "POST",
+      body: JSON.stringify({ threadId }),
+    }),
+  gmailDraft: (body: { to: string; subject: string; body: string }) =>
+    request<{ id: string; url: string }>("/api/gmail/drafts", { method: "POST", body: JSON.stringify(body) }),
   saveMemo: (taskId: string, content: string) =>
     request<Memo>(`/api/memos/${encodeURIComponent(taskId)}`, { method: "PUT", body: JSON.stringify({ content }) }),
 };

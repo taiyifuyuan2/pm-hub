@@ -14,6 +14,8 @@ function parsePermissionMode(value: string | undefined): PermissionMode | undefi
 const dataDir = path.join(os.homedir(), ".pm-hub");
 
 export const config = {
+  /** データ置き場（~/.pm-hub）。DB のほか、Google の認証情報もここに置く */
+  dataDir,
   port: Number(process.env.PMHUB_PORT ?? 3001),
   /** claude: Claude Code CLI を起動 / mock: ダミー応答をストリーミング */
   mode: (process.env.PMHUB_AGENT === "mock" || process.argv.includes("--mock") ? "mock" : "claude") as AgentMode,

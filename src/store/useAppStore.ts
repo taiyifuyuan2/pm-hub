@@ -94,6 +94,7 @@ interface AppState extends UiSettings {
   updateMemo: (taskId: string, content: string) => void;
   addMessage: (taskId: string, input: { sender: string; content: string }) => Promise<void>;
   deleteMessage: (taskId: string, id: string) => Promise<void>;
+  importGmailThread: (taskId: string, threadId: string) => Promise<number>;
   // AIログはサーバー側（/api/chat）で保存されるため、以下は画面表示用のローカル更新のみ
   addAiLog: (log: Omit<AiLog, "id" | "timestamp">) => string;
   updateAiLog: (taskId: string, logId: string, patch: Partial<Pick<AiLog, "message" | "status" | "permission">>) => void;
@@ -332,6 +333,12 @@ export const useAppStore = create<AppState>()(
       addMessage: async (taskId, input) => {
         const m = await api.addMessage(taskId, { source: "manual", ...input });
         set((s) => ({ messages: { ...s.messages, [taskId]: [...(s.messages[taskId] ?? []), m] } }));
+      },
+
+      importGmailThread: async (taskId, threadId) => {
+        const added = await api.gmailImport(taskId, threadId);
+        set((s) => ({ messages: { ...s.messages, [taskId]: [...(s.messages[taskId] ?? []), ...added] } }));
+        return added.length;
       },
 
       deleteMessage: async (taskId, id) => {
