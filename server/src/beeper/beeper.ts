@@ -20,16 +20,22 @@ export const saveBeeperToken = (token: string) =>
   fs.writeFileSync(tokenPath(), JSON.stringify({ token }), { mode: 0o600 });
 export const clearBeeperToken = () => fs.rmSync(tokenPath(), { force: true });
 
-async function beeper<T>(pathAndQuery: string): Promise<T> {
+async function beeper<T>(pathAndQuery: string, init?: { method: string; body: unknown }): Promise<T> {
   const token = loadToken();
   if (!token) throw new Error("Beeper のアクセストークンが設定されていません");
   let res: Response;
   try {
-    res = await fetch(`${BASE}${pathAndQuery}`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10_000) });
+    res = await fetch(`${BASE}${pathAndQuery}`, {
+      method: init?.method ?? "GET",
+      headers: { Authorization: `Bearer ${token}`, ...(init ? { "Content-Type": "application/json" } : {}) },
+      body: init ? JSON.stringify(init.body) : undefined,
+      signal: AbortSignal.timeout(10_000),
+    });
   } catch {
     throw new Error("Beeper Desktop に接続できません。Beeper を起動してください");
   }
   if (res.status === 401) throw new Error("Beeper のトークンが無効です。作り直してください");
+  if (res.status === 403) throw new Error("Beeper のトークンに、この操作の権限がありません（書き込み権限つきで作り直してください）");
   if (!res.ok) throw new Error(`Beeper API: HTTP ${res.status}`);
   return (await res.json()) as T;
 }
@@ -114,4 +120,20 @@ export async function readChat(chatID: string, limit = 30): Promise<{ title: str
     .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
     .slice(-limit);
   return { title: chat.title, messages };
+}
+
+/**
+ * チャットの入力欄に下書きを入れる。送信はしない（送信の API は呼ばない）。
+ * すでに下書きがあるチャットには入れない（ユーザーが書きかけの文を消さないため）。
+ * タイトルが完全一致するチャットが 1 つだけのときに限る。
+ */
+export async function setChatDraft(title: string, text: string): Promise<{ chatTitle: string; network: string }> {
+  const res = await beeper<{ items: (RawChat & { draft?: { text?: string } | null })[] }>("/v1/chats?limit=100");
+  const hits = res.items.filter((c) => c.title === title);
+  if (hits.length === 0) throw new Error(`「${title}」のチャットが見つかりません`);
+  if (hits.length > 1) throw new Error(`「${title}」という名前のチャットが複数あります。Beeper で直接入力してください`);
+  const chat = hits[0];
+  if (chat.draft?.text?.trim()) throw new Error("このチャットにはすでに下書きがあります。Beeper で確認してください");
+  await beeper(`/v1/chats/${encodeURIComponent(chat.id)}`, { method: "PATCH", body: { draft: { text } } });
+  return { chatTitle: chat.title, network: chat.network };
 }

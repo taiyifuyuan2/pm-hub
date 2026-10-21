@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { copyText } from "../lib/clipboard";
+import { BeeperDraftCard } from "./BeeperDraftCard";
 import { GmailDraftCard } from "./GmailDraftCard";
 import { Icon } from "./Icon";
 
@@ -49,6 +50,10 @@ export function Markdown({ children, className = "" }: { children: string; class
             if (code?.type === "element" && Array.isArray(code.properties?.className) && code.properties.className.includes("language-gmail-draft")) {
               const text = code.children.map((c) => (c.type === "text" ? c.value : "")).join("");
               return <GmailDraftCard source={text} />;
+            }
+            if (code?.type === "element" && Array.isArray(code.properties?.className) && code.properties.className.includes("language-beeper-draft")) {
+              const text = code.children.map((c) => (c.type === "text" ? c.value : "")).join("");
+              return <BeeperDraftCard source={text} />;
             }
             return <CodeBlock>{children}</CodeBlock>;
           },

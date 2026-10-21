@@ -96,6 +96,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ chatID }),
     }),
+  beeperDraft: (body: { chat: string; text: string }) =>
+    request<{ chatTitle: string; network: string }>("/api/beeper/draft", { method: "POST", body: JSON.stringify(body) }),
   saveMemo: (taskId: string, content: string) =>
     request<Memo>(`/api/memos/${encodeURIComponent(taskId)}`, { method: "PUT", body: JSON.stringify({ content }) }),
 };

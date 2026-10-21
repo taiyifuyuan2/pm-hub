@@ -1,5 +1,5 @@
 import { Router, type Response } from "express";
-import { clearBeeperToken, beeperStatus, listChats, readChat, saveBeeperToken } from "../beeper/beeper";
+import { beeperStatus, clearBeeperToken, listChats, readChat, saveBeeperToken, setChatDraft } from "../beeper/beeper";
 import { messagesRepo, tasksRepo } from "../db/repositories";
 import { isTaskId } from "../validation";
 
@@ -43,6 +43,19 @@ beeperRouter.post("/tasks/:taskId/beeper-import", async (req, res) => {
       .filter((m) => !existing.has(`${m.timestamp}|${m.sender}|${m.content}`))
       .map((m) => messagesRepo.insert({ taskId, ...m }));
     res.status(201).json(added);
+  } catch (err) {
+    fail(res, err);
+  }
+});
+
+/** チャットの入力欄に下書きを入れる（送信はしない） */
+beeperRouter.post("/beeper/draft", async (req, res) => {
+  const { chat, text } = req.body ?? {};
+  if (typeof chat !== "string" || !chat.trim() || typeof text !== "string" || !text.trim() || text.length > 20_000) {
+    return res.status(400).json({ error: "chat / text が不正です" });
+  }
+  try {
+    res.status(201).json(await setChatDraft(chat, text));
   } catch (err) {
     fail(res, err);
   }

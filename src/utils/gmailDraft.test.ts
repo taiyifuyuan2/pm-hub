@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { parseGmailDraft } from "./gmailDraft";
+import { parseBeeperDraft, parseGmailDraft } from "./gmailDraft";
 
 describe("parseGmailDraft", () => {
   it("宛先・件名・本文を読む", () => {
@@ -20,5 +20,20 @@ describe("parseGmailDraft", () => {
   it("区切りや本文がなければ下書きとして扱わない", () => {
     assert.equal(parseGmailDraft("to: a@example.com\nsubject: x"), null);
     assert.equal(parseGmailDraft("to: a\n---\n  \n"), null);
+  });
+});
+
+describe("parseBeeperDraft", () => {
+  it("チャット名と文面を読む", () => {
+    assert.deepEqual(parseBeeperDraft("chat: 岩元大貴\n---\n自分で作ってるアプリ笑\n2行目"), {
+      chat: "岩元大貴",
+      text: "自分で作ってるアプリ笑\n2行目",
+    });
+  });
+
+  it("チャット名か文面がなければ null", () => {
+    assert.equal(parseBeeperDraft("---\nこんにちは"), null);
+    assert.equal(parseBeeperDraft("chat: A\n---\n "), null);
+    assert.equal(parseBeeperDraft("chat: A"), null);
   });
 });
