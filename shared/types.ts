@@ -74,7 +74,7 @@ export interface AiLog {
   permission?: PermissionInfo;
 }
 
-export type MessageSource = "slack" | "email" | "beeper";
+export type MessageSource = "slack" | "email" | "beeper" | "line" | "manual";
 
 export interface MessageThread {
   id: string;

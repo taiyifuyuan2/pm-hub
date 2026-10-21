@@ -194,7 +194,18 @@ export const aiLogsRepo = {
 // ---------- messages ----------
 
 const selectMessages = db.prepare("SELECT * FROM messages ORDER BY timestamp, rowid");
+const insertMessage = db.prepare(
+  "INSERT INTO messages (id, taskId, source, sender, content, timestamp) VALUES (:id, :taskId, :source, :sender, :content, :timestamp)",
+);
+const deleteMessage = db.prepare("DELETE FROM messages WHERE taskId = ? AND id = ?");
 
 export const messagesRepo = {
   allByTask: () => groupByTask(selectMessages.all() as unknown as MessageThread[]),
+  insert: (m: Omit<MessageThread, "id" | "timestamp"> & { timestamp?: string }): MessageThread => {
+    const row = { ...m, id: randomUUID(), timestamp: m.timestamp ?? now() };
+    insertMessage.run(row);
+    return row;
+  },
+  remove: (taskId: string, id: string) =>
+    Number(deleteMessage.run(taskId, id).changes) > 0,
 };

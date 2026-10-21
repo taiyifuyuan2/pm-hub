@@ -4,7 +4,7 @@ import type {
   PermissionResponseRequest,
   PermissionRulesResponse,
 } from "../../shared/agent";
-import type { Memo, Task } from "../types";
+import type { Memo, MessageSource, MessageThread, Task } from "../types";
 
 export const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:3001";
 
@@ -42,6 +42,13 @@ export const api = {
     request<{ removed: number }>(`/api/permissions/rules${taskId ? `?taskId=${encodeURIComponent(taskId)}` : ""}`, {
       method: "DELETE",
     }),
+  addMessage: (taskId: string, body: { source: MessageSource; sender: string; content: string }) =>
+    request<MessageThread>(`/api/tasks/${encodeURIComponent(taskId)}/messages`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  deleteMessage: (taskId: string, id: string) =>
+    request<void>(`/api/tasks/${encodeURIComponent(taskId)}/messages/${encodeURIComponent(id)}`, { method: "DELETE" }),
   saveMemo: (taskId: string, content: string) =>
     request<Memo>(`/api/memos/${encodeURIComponent(taskId)}`, { method: "PUT", body: JSON.stringify({ content }) }),
 };

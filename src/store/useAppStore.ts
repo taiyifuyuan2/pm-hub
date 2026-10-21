@@ -92,6 +92,8 @@ interface AppState extends UiSettings {
   /** サーバーで削除できてから画面から消す。失敗時は例外を投げる */
   deleteTask: (taskId: string) => Promise<void>;
   updateMemo: (taskId: string, content: string) => void;
+  addMessage: (taskId: string, input: { sender: string; content: string }) => Promise<void>;
+  deleteMessage: (taskId: string, id: string) => Promise<void>;
   // AIログはサーバー側（/api/chat）で保存されるため、以下は画面表示用のローカル更新のみ
   addAiLog: (log: Omit<AiLog, "id" | "timestamp">) => string;
   updateAiLog: (taskId: string, logId: string, patch: Partial<Pick<AiLog, "message" | "status" | "permission">>) => void;
@@ -325,6 +327,16 @@ export const useAppStore = create<AppState>()(
             selectedTaskId: s.selectedTaskId === taskId ? resolveSelectedTaskId(tasks, null) : s.selectedTaskId,
           };
         });
+      },
+
+      addMessage: async (taskId, input) => {
+        const m = await api.addMessage(taskId, { source: "manual", ...input });
+        set((s) => ({ messages: { ...s.messages, [taskId]: [...(s.messages[taskId] ?? []), m] } }));
+      },
+
+      deleteMessage: async (taskId, id) => {
+        await api.deleteMessage(taskId, id);
+        set((s) => ({ messages: { ...s.messages, [taskId]: (s.messages[taskId] ?? []).filter((m) => m.id !== id) } }));
       },
 
       updateMemo: (taskId, content) => {

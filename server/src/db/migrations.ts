@@ -96,6 +96,25 @@ const MIGRATIONS: { version: number; sql: string }[] = [
     version: 4,
     sql: `ALTER TABLE tasks ADD COLUMN isPinned INTEGER NOT NULL DEFAULT 0 CHECK (isPinned IN (0, 1));`,
   },
+  {
+    // メッセージの送信元に line（LINE）と manual（手入力）を追加。CHECK 制約の変更のため作り直す
+    version: 5,
+    sql: `
+      CREATE TABLE messages_v5 (
+        id        TEXT PRIMARY KEY,
+        taskId    TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        source    TEXT NOT NULL CHECK (source IN ('slack', 'email', 'beeper', 'line', 'manual')),
+        sender    TEXT NOT NULL,
+        content   TEXT NOT NULL,
+        timestamp TEXT NOT NULL
+      );
+      INSERT INTO messages_v5 (rowid, id, taskId, source, sender, content, timestamp)
+        SELECT rowid, id, taskId, source, sender, content, timestamp FROM messages;
+      DROP TABLE messages;
+      ALTER TABLE messages_v5 RENAME TO messages;
+      CREATE INDEX idx_messages_task ON messages(taskId);
+    `,
+  },
 ];
 
 export const LATEST_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

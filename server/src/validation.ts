@@ -1,4 +1,4 @@
-import type { Task, TaskStatus } from "../../shared/types";
+import type { MessageSource, Task, TaskStatus } from "../../shared/types";
 
 // taskId は作業ディレクトリ名にも使うので、パス区切りなどを含まない値に限定する
 export const TASK_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
@@ -65,6 +65,19 @@ export function parseNewTask(body: unknown): Task | string {
     scheduledAt: rest.scheduledAt,
     isPinned: rest.isPinned ?? false,
   };
+}
+
+const MESSAGE_SOURCES: readonly MessageSource[] = ["slack", "email", "beeper", "line", "manual"];
+
+/** POST /api/tasks/:id/messages の本文を検証する。不正なら理由の文字列を返す */
+export function parseNewMessage(body: unknown): { source: MessageSource; sender: string; content: string } | string {
+  if (typeof body !== "object" || body === null) return "本文が不正です";
+  const b = body as Record<string, unknown>;
+  const source = (b.source ?? "manual") as MessageSource;
+  if (!MESSAGE_SOURCES.includes(source)) return "source が不正です";
+  if (!isText(b.sender, 200) || !b.sender.trim()) return "sender が不正です";
+  if (!isText(b.content) || !b.content.trim()) return "content が不正です";
+  return { source, sender: b.sender.trim(), content: b.content.trim() };
 }
 
 export const isMemoContent = (v: unknown): v is string => isText(v, 200_000);

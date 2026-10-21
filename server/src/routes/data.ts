@@ -2,7 +2,7 @@ import { Router } from "express";
 import type { BootstrapResponse } from "../../../shared/agent";
 import { aiLogsRepo, memosRepo, messagesRepo, tasksRepo } from "../db/repositories";
 import { isTaskRunning } from "./chat";
-import { isMemoContent, isTaskId, parseNewTask, parseTaskPatch } from "../validation";
+import { isMemoContent, isTaskId, parseNewMessage, parseNewTask, parseTaskPatch } from "../validation";
 
 export const dataRouter = Router();
 
@@ -53,4 +53,22 @@ dataRouter.put("/memos/:taskId", (req, res) => {
   if (!isMemoContent(req.body?.content)) return res.status(400).json({ error: "content が不正です" });
   if (!tasksRepo.get(taskId)) return res.status(404).json({ error: "タスクが見つかりません" });
   res.json(memosRepo.save(taskId, req.body.content));
+});
+
+/** POST /api/tasks/:taskId/messages — メッセージを1件追加する（手入力・外部連携の取り込み共通） */
+dataRouter.post("/tasks/:taskId/messages", (req, res) => {
+  const { taskId } = req.params;
+  if (!isTaskId(taskId)) return res.status(400).json({ error: "taskId が不正です" });
+  const message = parseNewMessage(req.body);
+  if (typeof message === "string") return res.status(400).json({ error: message });
+  if (!tasksRepo.get(taskId)) return res.status(404).json({ error: "タスクが見つかりません" });
+  res.status(201).json(messagesRepo.insert({ taskId, ...message }));
+});
+
+/** DELETE /api/tasks/:taskId/messages/:id */
+dataRouter.delete("/tasks/:taskId/messages/:id", (req, res) => {
+  const { taskId, id } = req.params;
+  if (!isTaskId(taskId) || typeof id !== "string") return res.status(400).json({ error: "id が不正です" });
+  if (!messagesRepo.remove(taskId, id)) return res.status(404).json({ error: "メッセージが見つかりません" });
+  res.status(204).end();
 });
