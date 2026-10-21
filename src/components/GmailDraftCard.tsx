@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { toast } from "../store/toastStore";
 import { parseGmailDraft } from "../utils/gmailDraft";
 import { Icon } from "./Icon";
+import { SendWithUndo } from "./SendWithUndo";
 
 const field = "w-full rounded-md border border-line bg-hover px-2 py-1 text-xs text-fg outline-none focus:border-ink";
 
@@ -44,6 +45,16 @@ export function GmailDraftCard({ source }: { source: string }) {
       >
         {state === "saved" ? "保存しました" : state === "saving" ? "保存中…" : "Gmail の下書きに保存"}
       </button>
+      <span className="ml-2 inline-block align-middle">
+        <SendWithUndo
+          target={to.trim() || "宛先"}
+          disabled={!to.trim() || !body.trim()}
+          onSend={async () => {
+            await api.gmailSend({ to, subject, body });
+          }}
+          onError={(err) => toast.error(err instanceof Error ? err.message : String(err))}
+        />
+      </span>
       {!to.trim() && state === "idle" && <p className="text-[11px] text-subtle">宛先を入れると保存できます</p>}
     </div>
   );

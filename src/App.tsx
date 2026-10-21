@@ -5,11 +5,13 @@ import { AppSkeleton } from "./components/Skeleton";
 import { ToastHost } from "./components/ToastHost";
 import { ChatPanel } from "./features/chat/ChatPanel";
 import { ContextPanel } from "./features/context/ContextPanel";
+import { InboxDialog } from "./features/inbox/InboxDialog";
 import { InsightsDialog } from "./features/insights/InsightsDialog";
 import { TaskListPanel } from "./features/tasks/TaskListPanel";
 import { API_BASE } from "./lib/api";
 import { useGlobalShortcuts } from "./lib/shortcuts";
 import { useThemeEffect } from "./lib/useTheme";
+import { useInboxStore } from "./store/inboxStore";
 import { useAppStore } from "./store/useAppStore";
 
 // サーバーは Tauri / Vite が自動起動するが、立ち上がるまで数秒かかることがある
@@ -23,6 +25,10 @@ function App() {
   const shortcutsOpen = useAppStore((s) => s.shortcutsOpen);
   const setShortcutsOpen = useAppStore((s) => s.setShortcutsOpen);
 
+  const inboxOpen = useInboxStore((s) => s.open);
+  const setInboxOpen = useInboxStore((s) => s.setOpen);
+  const pollInbox = useInboxStore((s) => s.poll);
+
   useThemeEffect();
   useGlobalShortcuts();
 
@@ -35,6 +41,19 @@ function App() {
     const timer = setTimeout(() => void hydrate(), RETRY_INTERVAL_MS);
     return () => clearTimeout(timer);
   }, [load, hydrate]);
+
+  // 受信トレイは、サーバーが自動で作った返信案を取りに行く。画面を隠していても動く
+  useEffect(() => {
+    if (load.status !== "ready") return;
+    void pollInbox();
+    const timer = setInterval(() => void pollInbox(), 8000);
+    const onFocus = () => void pollInbox();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [load.status, pollInbox]);
 
   if (load.status !== "ready") {
     return (
@@ -56,6 +75,7 @@ function App() {
     <>
       <AppLayout left={<TaskListPanel />} center={<ChatPanel />} right={<ContextPanel />} />
       {insightsOpen && <InsightsDialog onClose={() => setInsightsOpen(false)} />}
+      {inboxOpen && <InboxDialog onClose={() => setInboxOpen(false)} />}
       {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
       <ToastHost />
     </>

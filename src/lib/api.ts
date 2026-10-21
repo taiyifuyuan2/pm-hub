@@ -4,7 +4,7 @@ import type {
   PermissionResponseRequest,
   PermissionRulesResponse,
 } from "../../shared/agent";
-import type { Memo, MessageSource, MessageThread, Task } from "../types";
+import type { InboxResponse, Memo, MessageSource, MessageThread, Suggestion, Task, WatchedChat } from "../types";
 
 export interface GoogleStatus {
   configured: boolean;
@@ -98,6 +98,20 @@ export const api = {
     }),
   beeperDraft: (body: { chat: string; text: string }) =>
     request<{ chatTitle: string; network: string }>("/api/beeper/draft", { method: "POST", body: JSON.stringify(body) }),
+  inbox: () => request<InboxResponse>("/api/inbox"),
+  inboxPaused: (paused: boolean) => request<InboxResponse>("/api/inbox/paused", { method: "PUT", body: JSON.stringify({ paused }) }),
+  inboxWatch: (chat: WatchedChat, enabled: boolean) =>
+    request<InboxResponse>("/api/inbox/watch", { method: "PUT", body: JSON.stringify({ ...chat, enabled }) }),
+  inboxSend: (id: string, text: string) =>
+    request<Suggestion>(`/api/inbox/${encodeURIComponent(id)}/send`, { method: "POST", body: JSON.stringify({ text }) }),
+  inboxDraft: (id: string, text: string) =>
+    request<Suggestion>(`/api/inbox/${encodeURIComponent(id)}/draft`, { method: "POST", body: JSON.stringify({ text }) }),
+  inboxRegenerate: (id: string) => request<Suggestion>(`/api/inbox/${encodeURIComponent(id)}/regenerate`, { method: "POST" }),
+  inboxDismiss: (id: string) => request<Suggestion>(`/api/inbox/${encodeURIComponent(id)}/dismiss`, { method: "POST" }),
+  beeperSend: (body: { chat: string; text: string }) =>
+    request<{ chatTitle: string; network: string }>("/api/beeper/send", { method: "POST", body: JSON.stringify(body) }),
+  gmailSend: (body: { to: string; subject: string; body: string }) =>
+    request<{ id: string }>("/api/gmail/send", { method: "POST", body: JSON.stringify(body) }),
   saveMemo: (taskId: string, content: string) =>
     request<Memo>(`/api/memos/${encodeURIComponent(taskId)}`, { method: "PUT", body: JSON.stringify({ content }) }),
 };

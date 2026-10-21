@@ -7,6 +7,7 @@ import {
   googleStatus,
   readThread,
   searchThreads,
+  sendMail,
   startLogin,
 } from "../google/google";
 import { isTaskId } from "../validation";
@@ -94,6 +95,19 @@ googleRouter.post("/gmail/drafts", async (req, res) => {
     res
       .status(201)
       .json(await createDraft({ to: to.trim(), subject, body, threadId: typeof threadId === "string" ? threadId : undefined }));
+  } catch (err) {
+    fail(res, err);
+  }
+});
+
+/** メールを送信する。画面で「送信」を押された（取り消し時間が過ぎた）ときだけ呼ばれる */
+googleRouter.post("/gmail/send", async (req, res) => {
+  const { to, subject, body, threadId } = req.body ?? {};
+  if (typeof to !== "string" || !to.trim() || typeof subject !== "string" || typeof body !== "string" || !body.trim()) {
+    return res.status(400).json({ error: "to / subject / body が必要です" });
+  }
+  try {
+    res.status(201).json(await sendMail({ to: to.trim(), subject, body, threadId: typeof threadId === "string" ? threadId : undefined }));
   } catch (err) {
     fail(res, err);
   }

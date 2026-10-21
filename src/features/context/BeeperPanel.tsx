@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Icon } from "../../components/Icon";
 import { api, type BeeperChat, type BeeperStatus } from "../../lib/api";
+import { Switch } from "../../components/Switch";
+import { useInboxStore } from "../../store/inboxStore";
 import { toast } from "../../store/toastStore";
 import { useAppStore } from "../../store/useAppStore";
 import { formatRelative } from "../../utils/format";
@@ -12,6 +14,8 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 /** Beeper（LINE・Telegram・WhatsApp など）のチャットを選んで、直近のメッセージをタスクに取り込む */
 export function BeeperPanel({ taskId }: { taskId: string }) {
   const importChat = useAppStore((s) => s.importBeeperChat);
+  const watched = useInboxStore((s) => s.watched);
+  const setWatch = useInboxStore((s) => s.setWatch);
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<BeeperStatus | null>(null);
   const [token, setToken] = useState("");
@@ -130,6 +134,14 @@ export function BeeperPanel({ taskId }: { taskId: string }) {
                         {c.unreadCount > 0 ? ` ・ 未読 ${c.unreadCount}` : ""}
                       </p>
                     </div>
+                    <label className="flex shrink-0 items-center gap-1 text-[10px] text-subtle" title="新しいメッセージが届いたら、自動で返信案を作ります（送信はしません）">
+                      自動返信案
+                      <Switch
+                        checked={watched.some((w) => w.chatID === c.id)}
+                        onChange={(on) => void setWatch({ chatID: c.id, title: c.title, network: c.network }, on)}
+                        label={`${c.title} の自動返信案`}
+                      />
+                    </label>
                     <button
                       type="button"
                       onClick={() => doImport(c)}

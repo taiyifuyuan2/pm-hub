@@ -7,6 +7,8 @@ import { beeperRouter } from "./routes/beeper";
 import { chatRouter } from "./routes/chat";
 import { dataRouter } from "./routes/data";
 import { googleRouter } from "./routes/google";
+import { inboxRouter } from "./routes/inbox";
+import { startInboxWatcher } from "./inbox/watcher";
 import { permissionsRouter } from "./routes/permissions";
 
 const app = express();
@@ -29,6 +31,7 @@ app.use("/api", dataRouter);
 app.use("/api", chatRouter);
 app.use("/api", googleRouter);
 app.use("/api", beeperRouter);
+app.use("/api", inboxRouter);
 app.use("/api", permissionsRouter);
 
 // 外部からアクセスされないよう 127.0.0.1 のみで待ち受ける
@@ -37,6 +40,8 @@ const server = app.listen(config.port, "127.0.0.1", () => {
   console.log(`[pm-hub server] db: ${config.dbPath}`);
   console.log(`[pm-hub server] workspaces: ${config.workspaceRoot}`);
 });
+
+startInboxWatcher();
 
 server.on("error", (err: NodeJS.ErrnoException) => {
   console.error(

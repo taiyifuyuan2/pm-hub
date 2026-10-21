@@ -128,12 +128,61 @@ export async function readChat(chatID: string, limit = 30): Promise<{ title: str
  * タイトルが完全一致するチャットが 1 つだけのときに限る。
  */
 export async function setChatDraft(title: string, text: string): Promise<{ chatTitle: string; network: string }> {
-  const res = await beeper<{ items: (RawChat & { draft?: { text?: string } | null })[] }>("/v1/chats?limit=100");
+  return setChatDraftById((await findChatByTitle(title)).id, text);
+}
+
+/** タイトルが完全一致するチャットが 1 つだけのときに限って返す（別の人に届かないようにするため） */
+export async function findChatByTitle(title: string): Promise<RawChat> {
+  const res = await beeper<{ items: RawChat[] }>("/v1/chats?limit=100");
   const hits = res.items.filter((c) => c.title === title);
   if (hits.length === 0) throw new Error(`「${title}」のチャットが見つかりません`);
-  if (hits.length > 1) throw new Error(`「${title}」という名前のチャットが複数あります。Beeper で直接入力してください`);
-  const chat = hits[0];
+  if (hits.length > 1) throw new Error(`「${title}」という名前のチャットが複数あります。Beeper で直接操作してください`);
+  return hits[0];
+}
+
+/** ID が分かっているチャットの入力欄に下書きを入れる（送信はしない）。すでに下書きがあれば断る */
+export async function setChatDraftById(chatID: string, text: string): Promise<{ chatTitle: string; network: string }> {
+  const chat = await beeper<RawChat & { draft?: { text?: string } | null }>(`/v1/chats/${encodeURIComponent(chatID)}`);
   if (chat.draft?.text?.trim()) throw new Error("このチャットにはすでに下書きがあります。Beeper で確認してください");
-  await beeper(`/v1/chats/${encodeURIComponent(chat.id)}`, { method: "PATCH", body: { draft: { text } } });
+  await beeper(`/v1/chats/${encodeURIComponent(chatID)}`, { method: "PATCH", body: { draft: { text } } });
   return { chatTitle: chat.title, network: chat.network };
 }
+
+/**
+ * メッセージを送信する。呼び出し元は、ユーザーが画面で明示的に「送信」を押したときだけ呼ぶこと
+ * （自動処理からは呼ばない）。
+ */
+export async function sendChatMessage(chatID: string, text: string): Promise<{ chatID: string; pendingMessageID: string }> {
+  return beeper(`/v1/chats/${encodeURIComponent(chatID)}/messages`, { method: "POST", body: { text } });
+}
+
+export interface RecentMessage {
+  id: string;
+  sender: string;
+  isSender: boolean;
+  text: string;
+  timestamp: string;
+}
+
+/** チャットの直近のメッセージ（古い順）。テキストのないもの・削除済みは除く */
+export async function recentMessages(chatID: string, limit = 15): Promise<{ title: string; network: string; messages: RecentMessage[] }> {
+  const id = encodeURIComponent(chatID);
+  const [chat, list] = await Promise.all([
+    beeper<RawChat>(`/v1/chats/${id}`),
+    beeper<{ items: (RawMessage & { id: string })[] }>(`/v1/chats/${id}/messages`),
+  ]);
+  const messages = list.items
+    .filter((m) => !m.isDeleted && m.text?.trim())
+    .map((m) => ({
+      id: m.id,
+      sender: m.isSender ? "自分" : (m.senderName ?? m.senderID ?? "(不明)"),
+      isSender: Boolean(m.isSender),
+      text: m.text!.trim(),
+      timestamp: new Date(m.timestamp).toISOString(),
+    }))
+    .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+    .slice(-limit);
+  return { title: chat.title, network: chat.network, messages };
+}
+
+export const beeperReady = async (): Promise<boolean> => (await beeperStatus()).valid;

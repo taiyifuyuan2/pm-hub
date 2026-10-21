@@ -115,6 +115,38 @@ const MIGRATIONS: { version: number; sql: string }[] = [
       CREATE INDEX idx_messages_task ON messages(taskId);
     `,
   },
+  {
+    // 受信トレイ: 自動で返信案を作るチャット（watched_chats）と、できた返信案（suggestions）、設定（settings）
+    version: 6,
+    sql: `
+      CREATE TABLE watched_chats (
+        chatID    TEXT PRIMARY KEY,
+        title     TEXT NOT NULL,
+        network   TEXT NOT NULL,
+        lastSeen  TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      );
+      CREATE TABLE suggestions (
+        id         TEXT PRIMARY KEY,
+        chatID     TEXT NOT NULL,
+        chatTitle  TEXT NOT NULL,
+        network    TEXT NOT NULL,
+        incoming   TEXT NOT NULL,
+        incomingAt TEXT NOT NULL,
+        draft      TEXT NOT NULL DEFAULT '',
+        note       TEXT,
+        status     TEXT NOT NULL CHECK (status IN ('generating', 'pending', 'sent', 'dismissed', 'error')),
+        error      TEXT,
+        createdAt  TEXT NOT NULL,
+        updatedAt  TEXT NOT NULL
+      );
+      CREATE INDEX idx_suggestions_status ON suggestions(status, createdAt);
+      CREATE TABLE settings (
+        key   TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `,
+  },
 ];
 
 export const LATEST_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { AiLog, Memo, MessageThread, Task } from "../../../shared/types";
+import type { AiLog, Memo, MessageThread, Suggestion, Task, WatchedChat } from "../../../shared/types";
 import { ALLOW_ALL_TOOL, type RuleSpec } from "../agent/permissionRules";
 import { db } from "./database";
 
@@ -208,4 +208,99 @@ export const messagesRepo = {
   },
   remove: (taskId: string, id: string) =>
     Number(deleteMessage.run(taskId, id).changes) > 0,
+};
+
+// ---------- 受信トレイ ----------
+
+const selectWatched = db.prepare("SELECT * FROM watched_chats ORDER BY createdAt");
+const upsertWatched = db.prepare(
+  `INSERT INTO watched_chats (chatID, title, network, lastSeen, createdAt) VALUES ($chatID, $title, $network, $lastSeen, $createdAt)
+   ON CONFLICT(chatID) DO UPDATE SET title = excluded.title, network = excluded.network`,
+);
+const deleteWatched = db.prepare("DELETE FROM watched_chats WHERE chatID = ?");
+const updateLastSeen = db.prepare("UPDATE watched_chats SET lastSeen = ? WHERE chatID = ?");
+
+export const watchRepo = {
+  list: () => selectWatched.all() as unknown as (WatchedChat & { lastSeen: string })[],
+  add: (chat: WatchedChat) => upsertWatched.run({ ...chat, lastSeen: now(), createdAt: now() }),
+  remove: (chatID: string) => deleteWatched.run(chatID),
+  setLastSeen: (chatID: string, lastSeen: string) => updateLastSeen.run(lastSeen, chatID),
+};
+
+const toSuggestion = (r: Row): Suggestion => ({
+  id: r.id as string,
+  chatID: r.chatID as string,
+  chatTitle: r.chatTitle as string,
+  network: r.network as string,
+  incoming: r.incoming as string,
+  incomingAt: r.incomingAt as string,
+  draft: r.draft as string,
+  note: opt(r.note),
+  status: r.status as Suggestion["status"],
+  error: opt(r.error),
+  createdAt: r.createdAt as string,
+  updatedAt: r.updatedAt as string,
+});
+
+// 対応が必要なもの（作成中・確認待ち・失敗）と、最近の送信済み・破棄済みだけを返す
+const selectSuggestions = db.prepare(
+  `SELECT * FROM suggestions
+   WHERE status IN ('generating', 'pending', 'error')
+      OR (status IN ('sent', 'dismissed') AND updatedAt > $since)
+   ORDER BY createdAt DESC LIMIT 100`,
+);
+const selectSuggestion = db.prepare("SELECT * FROM suggestions WHERE id = ?");
+const insertSuggestion = db.prepare(
+  `INSERT INTO suggestions (id, chatID, chatTitle, network, incoming, incomingAt, draft, status, createdAt, updatedAt)
+   VALUES ($id, $chatID, $chatTitle, $network, $incoming, $incomingAt, '', 'generating', $now, $now)`,
+);
+const supersedeSuggestions = db.prepare(
+  "UPDATE suggestions SET status = 'dismissed', updatedAt = $now WHERE chatID = $chatID AND status IN ('generating', 'pending', 'error')",
+);
+const updateSuggestionStmt = db.prepare(
+  `UPDATE suggestions SET draft = $draft, note = $note, status = $status, error = $error, updatedAt = $now WHERE id = $id`,
+);
+const failInterrupted = db.prepare(
+  "UPDATE suggestions SET status = 'error', error = '中断されました（再生成してください）', updatedAt = $now WHERE status = 'generating'",
+);
+
+export const suggestionsRepo = {
+  list: (): Suggestion[] =>
+    selectSuggestions.all({ since: new Date(Date.now() - 24 * 3600_000).toISOString() }).map(toSuggestion),
+  get: (id: string) => {
+    const row = selectSuggestion.get(id);
+    return row ? toSuggestion(row) : undefined;
+  },
+  /** 同じチャットの未対応の案は、新しい案で置き換える */
+  create: (input: { chatID: string; chatTitle: string; network: string; incoming: string; incomingAt: string }) => {
+    const id = randomUUID();
+    supersedeSuggestions.run({ chatID: input.chatID, now: now() });
+    insertSuggestion.run({ ...input, id, now: now() });
+    return suggestionsRepo.get(id)!;
+  },
+  update: (id: string, patch: Partial<Pick<Suggestion, "draft" | "note" | "status" | "error">>) => {
+    const cur = suggestionsRepo.get(id);
+    if (!cur) return undefined;
+    const next = { ...cur, ...patch };
+    updateSuggestionStmt.run({
+      id,
+      draft: next.draft,
+      note: next.note ?? null,
+      status: next.status,
+      error: next.error ?? null,
+      now: now(),
+    });
+    return suggestionsRepo.get(id);
+  },
+  failInterrupted: () => failInterrupted.run({ now: now() }),
+};
+
+const selectSetting = db.prepare("SELECT value FROM settings WHERE key = ?");
+const upsertSetting = db.prepare(
+  "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+);
+
+export const settingsRepo = {
+  get: (key: string) => selectSetting.get(key)?.value as string | undefined,
+  set: (key: string, value: string) => upsertSetting.run(key, value),
 };

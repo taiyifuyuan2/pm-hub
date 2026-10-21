@@ -255,8 +255,14 @@ export async function readThread(id: string): Promise<{ subject: string; message
 
 const encodeHeader = (v: string) => (/^[\x20-\x7e]*$/.test(v) ? v : `=?UTF-8?B?${Buffer.from(v).toString("base64")}?=`);
 
-/** 下書きを作る（送信はしない）。threadId を渡すとそのスレッドへの返信の下書きになる */
-export async function createDraft(input: { to: string; subject: string; body: string; threadId?: string }) {
+interface MailInput {
+  to: string;
+  subject: string;
+  body: string;
+  threadId?: string;
+}
+
+function mimeMessage(input: MailInput) {
   if (/[\r\n]/.test(input.to + input.subject)) throw new Error("宛先と件名に改行は使えません");
   const raw = [
     `To: ${input.to}`,
@@ -266,11 +272,17 @@ export async function createDraft(input: { to: string; subject: string; body: st
     "",
     Buffer.from(input.body).toString("base64"),
   ].join("\r\n");
-  const draft = await gmail<{ id: string }>("/drafts", {
-    method: "POST",
-    body: JSON.stringify({
-      message: { raw: Buffer.from(raw).toString("base64url"), ...(input.threadId ? { threadId: input.threadId } : {}) },
-    }),
-  });
+  return { raw: Buffer.from(raw).toString("base64url"), ...(input.threadId ? { threadId: input.threadId } : {}) };
+}
+
+/** 下書きを作る（送信はしない）。threadId を渡すとそのスレッドへの返信の下書きになる */
+export async function createDraft(input: MailInput) {
+  const draft = await gmail<{ id: string }>("/drafts", { method: "POST", body: JSON.stringify({ message: mimeMessage(input) }) });
   return { id: draft.id, url: "https://mail.google.com/mail/u/0/#drafts" };
+}
+
+/** メールを送信する。呼び出し元は、ユーザーが画面で明示的に「送信」を押したときだけ呼ぶこと */
+export async function sendMail(input: MailInput) {
+  const sent = await gmail<{ id: string }>("/messages/send", { method: "POST", body: JSON.stringify(mimeMessage(input)) });
+  return { id: sent.id };
 }

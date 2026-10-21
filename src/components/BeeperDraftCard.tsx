@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { toast } from "../store/toastStore";
 import { parseBeeperDraft } from "../utils/gmailDraft";
 import { Icon } from "./Icon";
+import { SendWithUndo } from "./SendWithUndo";
 
 /** AI が作った返信文。確認・編集して、相手とのチャットの入力欄（Beeper）に入れられる。送信はしない */
 export function BeeperDraftCard({ source }: { source: string }) {
@@ -44,6 +45,16 @@ export function BeeperDraftCard({ source }: { source: string }) {
       >
         {state === "saved" ? "入れました" : state === "saving" ? "入れています…" : "Beeper の下書きに入れる"}
       </button>
+      <span className="ml-2 inline-block align-middle">
+        <SendWithUndo
+          target={parsed.chat}
+          disabled={!text.trim()}
+          onSend={async () => {
+            await api.beeperSend({ chat: parsed.chat, text });
+          }}
+          onError={(err) => toast.error(err instanceof Error ? err.message : String(err))}
+        />
+      </span>
     </div>
   );
 }

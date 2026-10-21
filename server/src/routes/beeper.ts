@@ -1,5 +1,5 @@
 import { Router, type Response } from "express";
-import { beeperStatus, clearBeeperToken, listChats, readChat, saveBeeperToken, setChatDraft } from "../beeper/beeper";
+import { beeperStatus, clearBeeperToken, findChatByTitle, listChats, readChat, saveBeeperToken, sendChatMessage, setChatDraft } from "../beeper/beeper";
 import { messagesRepo, tasksRepo } from "../db/repositories";
 import { isTaskId } from "../validation";
 
@@ -56,6 +56,21 @@ beeperRouter.post("/beeper/draft", async (req, res) => {
   }
   try {
     res.status(201).json(await setChatDraft(chat, text));
+  } catch (err) {
+    fail(res, err);
+  }
+});
+
+/** チャット名を指定して送信する。画面で「送信」を押された（取り消し時間が過ぎた）ときだけ呼ばれる */
+beeperRouter.post("/beeper/send", async (req, res) => {
+  const { chat, text } = req.body ?? {};
+  if (typeof chat !== "string" || !chat.trim() || typeof text !== "string" || !text.trim() || text.length > 20_000) {
+    return res.status(400).json({ error: "chat / text が不正です" });
+  }
+  try {
+    const target = await findChatByTitle(chat);
+    await sendChatMessage(target.id, text);
+    res.status(201).json({ chatTitle: target.title, network: target.network });
   } catch (err) {
     fail(res, err);
   }

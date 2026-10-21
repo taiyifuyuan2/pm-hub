@@ -6,8 +6,10 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::Duration;
 
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::webview::WebviewBuilder;
-use tauri::{Emitter, LogicalPosition, LogicalSize, Manager, RunEvent, WebviewUrl};
+use tauri::{Emitter, LogicalPosition, LogicalSize, Manager, RunEvent, WebviewUrl, WindowEvent};
 
 const SERVER_PORT: u16 = 3001;
 
@@ -202,9 +204,56 @@ fn browser_eval(app: tauri::AppHandle, action: String) -> Result<(), String> {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+/// 隠れているメインウィンドウを表示して、手前に出す
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
+
+/// タスクトレイのアイコンとメニュー。ウィンドウを閉じても、ここから開き直せる
+fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
+    let show = MenuItem::with_id(app, "show", "PM Hub を開く", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&show, &quit])?;
+    let mut builder = TrayIconBuilder::new()
+        .tooltip("PM Hub（バックグラウンドで動いています）")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "show" => show_main_window(app),
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
+                show_main_window(tray.app_handle());
+            }
+        });
+    if let Some(icon) = app.default_window_icon() {
+        builder = builder.icon(icon.clone());
+    }
+    builder.build(app)?;
+    Ok(())
+}
+
 pub fn run() {
     tauri::Builder::default()
+        // 2 つ目を起動しようとしたら、新しく起動せず、いま動いているウィンドウを出す
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main_window(app)))
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
+        // ウィンドウの × では終了せず、タスクトレイに隠れる（サーバーと自動の返信案づくりは動き続ける）
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "main" {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             browser_show,
             browser_set_bounds,
@@ -213,6 +262,9 @@ pub fn run() {
         ])
         .manage(ServerProcess(Mutex::new(None)))
         .setup(|app| {
+            if let Err(err) = setup_tray(app) {
+                eprintln!("[pm-hub] タスクトレイを作れませんでした: {err}");
+            }
             // tauri dev では Vite プラグインが先に起動していることが多い。その場合はそれを使う
             if is_server_running() {
                 println!("[pm-hub] 起動済みのサーバーを使用します");

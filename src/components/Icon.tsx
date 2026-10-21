@@ -18,6 +18,7 @@ const PATHS = {
   chevronRight: "m9 6 6 6-6 6",
   chevronLeft: "m15 6-6 6 6 6",
   x: "M6 6l12 12M18 6 6 18",
+  inbox: "M3 13l3-8h12l3 8v6H3v-6ZM3 13h5l1 3h6l1-3h5",
   copy: "M9 9h11v11H9zM5 15V4h11",
   panelLeft: "M3 5h18v14H3zM9 5v14",
   panelRight: "M3 5h18v14H3zM15 5v14",
