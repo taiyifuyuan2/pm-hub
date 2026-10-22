@@ -83,7 +83,9 @@ fn server_command(app: &tauri::AppHandle) -> Result<Command, String> {
     }
 
     let mut cmd = Command::new(node);
-    cmd.arg(&script);
+    // Windows の resource_dir() は \\?\ 付きになることがある。
+    // Node のメインモジュール解決に渡す前に、通常の Windows パスへ戻す。
+    cmd.arg(dunce::simplified(&script));
     Ok(cmd)
 }
 
