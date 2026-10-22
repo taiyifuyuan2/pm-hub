@@ -121,6 +121,8 @@ const persist = (label: string, promise: Promise<unknown>) =>
 // メモは入力のたびに保存せず、入力が止まってから送る
 const MEMO_SAVE_DELAY_MS = 500;
 const memoTimers = new Map<string, ReturnType<typeof setTimeout>>();
+// 同じメモの保存を直列化し、古いリクエストが新しい内容を上書きするのを防ぐ。
+const memoSaves = new Map<string, Promise<void>>();
 
 /**
  * localStorage が使えない環境（プライベートモード、容量超過、無効化など）でも、状態の更新自体は失敗させない。
@@ -202,6 +204,7 @@ export const useAppStore = create<AppState>()(
 
       refresh: async () => {
         if (get().refreshing) return;
+        const beforeRefresh = get();
         set({ refreshing: true });
         try {
           const data = await api.bootstrap();
@@ -211,7 +214,12 @@ export const useAppStore = create<AppState>()(
             for (const id of s.runningTaskIds) if (s.aiLogs[id]) aiLogs[id] = s.aiLogs[id];
             // 入力してまだ保存していないメモも、置き換えない
             const memos = { ...data.memos };
-            for (const id of memoTimers.keys()) if (s.memos[id]) memos[id] = s.memos[id];
+            for (const [id, memo] of Object.entries(s.memos)) {
+              const pending = (state: MemoSaveState | undefined) => state !== undefined && state !== "saved";
+              if (pending(s.memoSaveState[id]) || pending(beforeRefresh.memoSaveState[id]) || memo !== beforeRefresh.memos[id]) {
+                memos[id] = memo;
+              }
+            }
             return {
               tasks: data.tasks,
               memos,
@@ -354,10 +362,12 @@ export const useAppStore = create<AppState>()(
       },
 
       updateMemo: (taskId, content) => {
+        const memo: Memo = { taskId, content, updatedAt: now() };
+        const isCurrent = () => get().memos[taskId] === memo;
         const setSaveState = (state: MemoSaveState) =>
-          set((s) => ({ memoSaveState: { ...s.memoSaveState, [taskId]: state } }));
+          isCurrent() && set((s) => ({ memoSaveState: { ...s.memoSaveState, [taskId]: state } }));
         set((s) => ({
-          memos: { ...s.memos, [taskId]: { taskId, content, updatedAt: now() } },
+          memos: { ...s.memos, [taskId]: memo },
           memoSaveState: { ...s.memoSaveState, [taskId]: "dirty" },
         }));
         clearTimeout(memoTimers.get(taskId));
@@ -365,16 +375,24 @@ export const useAppStore = create<AppState>()(
           taskId,
           setTimeout(() => {
             memoTimers.delete(taskId);
-            setSaveState("saving");
-            api
-              .saveMemo(taskId, content)
-              // 保存中に更に入力があった場合は、その入力の保存結果で状態を決める（古い結果で上書きしない）
-              .then(() => memoTimers.has(taskId) || setSaveState("saved"))
+            const previous = memoSaves.get(taskId) ?? Promise.resolve();
+            const save = previous.then(async () => {
+              // 待機中に編集・削除された内容は送らない。
+              if (!isCurrent()) return;
+              setSaveState("saving");
+              await api.saveMemo(taskId, content);
+              setSaveState("saved");
+            })
               .catch((err) => {
                 console.error("[persist] メモの保存に失敗しました", err);
+                if (!isCurrent()) return;
                 setSaveState("error");
                 toast.error("メモを保存できませんでした。入力は画面に残っています。");
+              })
+              .finally(() => {
+                if (memoSaves.get(taskId) === save) memoSaves.delete(taskId);
               });
+            memoSaves.set(taskId, save);
           }, MEMO_SAVE_DELAY_MS),
         );
       },
