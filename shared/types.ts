@@ -87,6 +87,19 @@ export interface MessageThread {
 
 export type ContextTab = "memo" | "browser" | "messages";
 
+/** Beeper 側で照合済みの送信先。名前だけでなく ID とサービス名も確認に使う。 */
+export interface BeeperRecipient {
+  id: string;
+  title: string;
+  network: string;
+}
+
+export interface BeeperRecipientInput {
+  chat: string;
+  chatID?: string;
+  network?: string;
+}
+
 // ---------- 新着メッセージの自動タスク化 ----------
 
 export interface WatchedChat {

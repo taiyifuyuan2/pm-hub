@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { MessageSource } from "../../../shared/types";
+import type { BeeperRecipient, BeeperRecipientInput, MessageSource } from "../../../shared/types";
 import { config } from "../config";
 
 // Beeper Desktop のローカル API。読み取り専用で使い、メッセージの送信・編集・削除は呼ばない
@@ -72,6 +72,7 @@ export interface ChatSummary {
 
 interface RawChat extends ChatSummary {
   type?: string;
+  draft?: { text?: string } | null;
 }
 
 export async function listChats(q: string): Promise<ChatSummary[]> {
@@ -122,17 +123,8 @@ export async function readChat(chatID: string, limit = 30): Promise<{ title: str
   return { title: chat.title, messages };
 }
 
-/**
- * チャットの入力欄に下書きを入れる。送信はしない（送信の API は呼ばない）。
- * すでに下書きがあるチャットには入れない（ユーザーが書きかけの文を消さないため）。
- * タイトルが完全一致するチャットが 1 つだけのときに限る。
- */
-export async function setChatDraft(title: string, text: string): Promise<{ chatTitle: string; network: string }> {
-  return setChatDraftById((await findChatByTitle(title)).id, text);
-}
-
 /** タイトルが完全一致するチャットが 1 つだけのときに限って返す（別の人に届かないようにするため） */
-export async function findChatByTitle(title: string): Promise<RawChat> {
+async function findChatByTitle(title: string): Promise<RawChat> {
   const res = await beeper<{ items: RawChat[] }>("/v1/chats?limit=100");
   const hits = res.items.filter((c) => c.title === title);
   if (hits.length === 0) throw new Error(`「${title}」のチャットが見つかりません`);
@@ -140,11 +132,33 @@ export async function findChatByTitle(title: string): Promise<RawChat> {
   return hits[0];
 }
 
-/** ID が分かっているチャットの入力欄に下書きを入れる（送信はしない）。すでに下書きがあれば断る */
-export async function setChatDraftById(chatID: string, text: string): Promise<{ chatTitle: string; network: string }> {
-  const chat = await beeper<RawChat & { draft?: { text?: string } | null }>(`/v1/chats/${encodeURIComponent(chatID)}`);
+/** 表示名と実際の宛先を同じ境界で照合する。変更操作の直前にも必ず呼ぶ。 */
+async function resolveChat(input: BeeperRecipientInput): Promise<RawChat> {
+  if (typeof input?.chat !== "string" || !input.chat.trim()
+    || (input.chatID !== undefined && (typeof input.chatID !== "string" || !input.chatID.trim()))
+    || (input.network !== undefined && typeof input.network !== "string")) {
+    throw new Error("送信先が不正です。チャットを選び直してください");
+  }
+  const id = input.chatID ?? (await findChatByTitle(input.chat)).id;
+  if (typeof id !== "string" || !id.trim()) throw new Error("Beeper の送信先 ID が不正です");
+  const chat = await beeper<RawChat>(`/v1/chats/${encodeURIComponent(id)}`);
+  if (!chat || chat.id !== id || chat.title !== input.chat || typeof chat.network !== "string"
+    || (input.network !== undefined && chat.network !== input.network)) {
+    throw new Error("表示された送信先と Beeper の情報が一致しません。チャットを選び直してください");
+  }
+  return chat;
+}
+
+export async function resolveChatRecipient(input: BeeperRecipientInput): Promise<BeeperRecipient> {
+  const { id, title, network } = await resolveChat(input);
+  return { id, title, network };
+}
+
+/** 下書きは照合済みの相手にだけ入れ、既存の下書きは上書きしない。 */
+export async function setChatDraft(input: BeeperRecipientInput, text: string): Promise<{ chatTitle: string; network: string }> {
+  const chat = await resolveChat(input);
   if (chat.draft?.text?.trim()) throw new Error("このチャットにはすでに下書きがあります。Beeper で確認してください");
-  await beeper(`/v1/chats/${encodeURIComponent(chatID)}`, { method: "PATCH", body: { draft: { text } } });
+  await beeper(`/v1/chats/${encodeURIComponent(chat.id)}`, { method: "PATCH", body: { draft: { text } } });
   return { chatTitle: chat.title, network: chat.network };
 }
 
@@ -152,8 +166,10 @@ export async function setChatDraftById(chatID: string, text: string): Promise<{ 
  * メッセージを送信する。呼び出し元は、ユーザーが画面で明示的に「送信」を押したときだけ呼ぶこと
  * （自動処理からは呼ばない）。
  */
-export async function sendChatMessage(chatID: string, text: string): Promise<{ chatID: string; pendingMessageID: string }> {
-  return beeper(`/v1/chats/${encodeURIComponent(chatID)}/messages`, { method: "POST", body: { text } });
+export async function sendChatMessage(input: BeeperRecipientInput, text: string): Promise<{ chatTitle: string; network: string }> {
+  const chat = await resolveChat(input);
+  await beeper(`/v1/chats/${encodeURIComponent(chat.id)}/messages`, { method: "POST", body: { text } });
+  return { chatTitle: chat.title, network: chat.network };
 }
 
 export interface RecentMessage {

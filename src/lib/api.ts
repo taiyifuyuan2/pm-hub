@@ -4,7 +4,7 @@ import type {
   PermissionResponseRequest,
   PermissionRulesResponse,
 } from "../../shared/agent";
-import type { InboxResponse, Memo, MessageSource, MessageThread, Task, WatchedChat } from "../types";
+import type { BeeperRecipient, BeeperRecipientInput, InboxResponse, Memo, MessageSource, MessageThread, Task, WatchedChat } from "../types";
 
 export interface GoogleStatus {
   configured: boolean;
@@ -98,13 +98,15 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ chatID }),
     }),
-  beeperDraft: (body: { chat: string; chatID?: string; text: string }) =>
+  beeperRecipient: (body: BeeperRecipientInput) =>
+    request<BeeperRecipient>("/api/beeper/recipient", { method: "POST", body: JSON.stringify(body) }),
+  beeperDraft: (body: BeeperRecipientInput & { text: string }) =>
     request<{ chatTitle: string; network: string }>("/api/beeper/draft", { method: "POST", body: JSON.stringify(body) }),
   inbox: (after?: number) => request<InboxResponse>(`/api/inbox${after === undefined ? "" : `?after=${after}`}`),
   inboxPaused: (paused: boolean) => request<InboxResponse>("/api/inbox/paused", { method: "PUT", body: JSON.stringify({ paused }) }),
   inboxWatch: (chat: WatchedChat, enabled: boolean) =>
     request<InboxResponse>("/api/inbox/watch", { method: "PUT", body: JSON.stringify({ ...chat, enabled }) }),
-  beeperSend: (body: { chat: string; chatID?: string; text: string }) =>
+  beeperSend: (body: BeeperRecipientInput & { text: string }) =>
     request<{ chatTitle: string; network: string }>("/api/beeper/send", { method: "POST", body: JSON.stringify(body) }),
   gmailSend: (body: { to: string; subject: string; body: string }) =>
     request<{ id: string }>("/api/gmail/send", { method: "POST", body: JSON.stringify(body) }),
