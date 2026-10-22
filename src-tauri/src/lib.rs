@@ -60,6 +60,26 @@ fn server_command(_app: &tauri::AppHandle) -> Result<Command, String> {
     Ok(cmd)
 }
 
+/// Windows の `\\?\` 拡張パス（verbatim）プレフィックスを取り除く。
+/// resource_dir() 等が canonicalize 経由でこの形式を返すことがあり、
+/// Node.js のメインモジュール解決がこのプレフィックスを扱えず
+/// 'C:' だけを渡されたかのように誤動作するため、渡す前に普通のパスへ戻す。
+#[cfg(windows)]
+fn strip_verbatim_prefix(path: &PathBuf) -> PathBuf {
+    match path.to_str() {
+        Some(s) => match s.strip_prefix(r"\\?\") {
+            Some(rest) => PathBuf::from(rest),
+            None => path.clone(),
+        },
+        None => path.clone(),
+    }
+}
+
+#[cfg(not(windows))]
+fn strip_verbatim_prefix(path: &PathBuf) -> PathBuf {
+    path.clone()
+}
+
 /// 配布版: 同梱した Node（サイドカー）と、まとめたサーバー（リソース）で起動する。
 /// Node は externalBin として本体の exe と同じフォルダに置かれる。
 #[cfg(not(debug_assertions))]
@@ -68,13 +88,14 @@ fn server_command(app: &tauri::AppHandle) -> Result<Command, String> {
         .ok()
         .and_then(|p| p.parent().map(PathBuf::from))
         .ok_or("実行ファイルの場所を取得できませんでした")?;
-    let node = exe_dir.join(if cfg!(windows) { "node.exe" } else { "node" });
-    let script = app
-        .path()
-        .resource_dir()
-        .map_err(|e| format!("リソースの場所を取得できませんでした: {e}"))?
-        .join("server")
-        .join("server.cjs");
+    let node = strip_verbatim_prefix(&exe_dir.join(if cfg!(windows) { "node.exe" } else { "node" }));
+    let script = strip_verbatim_prefix(
+        &app.path()
+            .resource_dir()
+            .map_err(|e| format!("リソースの場所を取得できませんでした: {e}"))?
+            .join("server")
+            .join("server.cjs"),
+    );
 
     for (label, path) in [("Node", &node), ("サーバー", &script)] {
         if !path.exists() {
