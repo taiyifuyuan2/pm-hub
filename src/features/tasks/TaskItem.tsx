@@ -20,6 +20,7 @@ const RIGHT_ACTIONS_WIDTH = 148; // 左へスワイプ: ピン留め・削除
 const SLOP = 6;
 /** 離したとき、この割合以上開いていたら開いたままにする */
 const SNAP_RATIO = 0.4;
+const STATUS_LABELS = { unread: "未読", active: "進行中", scheduled: "予定", done: "完了" } as const;
 
 export function TaskItem({ task, selected, onSelect, onEdit, onDelete }: TaskItemProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -128,7 +129,7 @@ export function TaskItem({ task, selected, onSelect, onEdit, onDelete }: TaskIte
   return (
     <div
       data-task-id={task.id}
-      className="group/card relative overflow-hidden rounded-lg"
+      className={`group/card relative overflow-hidden rounded-xl border transition-colors ${selected ? "border-info bg-info-soft" : "border-line bg-surface hover:border-line-strong"}`}
       style={{ ["--cat" as string]: accent } as CSSProperties}
     >
       {/* 右へスワイプしたときに左側に現れる: 完了 */}
@@ -193,17 +194,15 @@ export function TaskItem({ task, selected, onSelect, onEdit, onDelete }: TaskIte
           data-task-card
           onClick={handleClick}
           aria-current={selected}
-          className={`flex w-full items-start gap-2.5 rounded-lg border py-2.5 pl-2.5 pr-9 text-left transition-colors ${
+          className={`flex w-full items-start gap-2.5 rounded-xl py-3 pl-3 pr-14 text-left transition-colors ${
             selected
-              ? "border-line-strong bg-active"
-              : unread
-                ? "border-transparent bg-new-soft hover:bg-new-soft"
-                : "border-transparent bg-sidebar hover:bg-hover"
+              ? "bg-info-soft shadow-[inset_3px_0_0_var(--c-info)]"
+              : "bg-surface hover:bg-hover"
           }`}
         >
           {/* カテゴリの色のアバター（タイトルの頭文字）。実行中は回転する輪を重ねる */}
           <span
-            className="relative mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg text-sm font-semibold text-fg"
+            className="relative mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-fg"
             style={{ background: "color-mix(in oklab, var(--cat) 20%, transparent)" }}
             aria-hidden="true"
           >
@@ -212,18 +211,20 @@ export function TaskItem({ task, selected, onSelect, onEdit, onDelete }: TaskIte
           </span>
 
           <span className="min-w-0 flex-1">
-            <span className="flex items-center gap-1.5">
-              {unread && <span className="size-1.5 shrink-0 rounded-full bg-new" aria-label="未読" />}
-              {task.isPinned && <Icon name="pin" size={12} className="shrink-0 text-subtle" aria-label="ピン留め中" role="img" />}
-              <span className={`truncate text-sm ${done ? "text-subtle line-through" : "text-fg"} ${unread ? "font-semibold" : "font-medium"}`}>
+            <span className="flex items-start gap-1.5">
+              {unread && <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-new" aria-label="未読" />}
+              {task.isPinned && <Icon name="pin" size={12} className="mt-1 shrink-0 text-info" aria-label="ピン留め中" role="img" />}
+              <span className={`line-clamp-2 break-words text-[13px] leading-5 ${done ? "text-subtle line-through" : "text-fg"} ${selected || unread ? "font-semibold" : "font-medium"}`}>
                 {task.title}
               </span>
             </span>
-            <span className="mt-1 flex items-center gap-2 text-[11px] text-subtle">
-              <span className="flex min-w-0 items-center gap-1.5">
+            {task.description && <span className="mt-1 block truncate text-[11px] leading-4 text-muted">{task.description}</span>}
+            <span className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[10px] text-subtle">
+              <span className="flex min-w-0 max-w-full items-center gap-1 rounded-md bg-hover px-1.5 py-0.5">
                 <span className="size-1.5 shrink-0 rounded-full" style={{ background: "var(--cat)" }} aria-hidden="true" />
                 <span className="truncate">{task.category}</span>
               </span>
+              {task.isPinned && <span>{STATUS_LABELS[task.status]}</span>}
               {scheduled ? (
                 <span className={`flex shrink-0 items-center gap-1 ${scheduled.overdue && !done ? "font-medium text-bad" : ""}`}>
                   <Icon name={scheduled.overdue && !done ? "alert" : "clock"} size={11} />
@@ -232,12 +233,12 @@ export function TaskItem({ task, selected, onSelect, onEdit, onDelete }: TaskIte
               ) : (
                 <span className="shrink-0">{formatRelative(task.createdAt)}</span>
               )}
-              {running && <span className="shrink-0 font-medium text-info">実行中</span>}
+              {running && <span className="flex shrink-0 items-center gap-1 font-medium text-info"><Icon name="sparkle" size={11} />AI 実行中</span>}
             </span>
           </span>
         </button>
 
-        {/* マウスで使うための「⋯」メニュー（スワイプを使えない環境の代わりにもなる） */}
+        {/* 常時見える操作ボタン。メニューはカード内に展開し、一覧の端でも隠れない */}
         <button
           type="button"
           data-swipe-ignore
@@ -245,11 +246,11 @@ export function TaskItem({ task, selected, onSelect, onEdit, onDelete }: TaskIte
           aria-label={`${task.title} のメニュー`}
           aria-haspopup="menu"
           aria-expanded={menuOpen}
-          className={`absolute right-1.5 top-2 flex size-6 items-center justify-center rounded-md text-subtle hover:bg-active hover:text-fg focus:opacity-100 ${
-            menuOpen ? "bg-active opacity-100" : "opacity-0 group-hover/card:opacity-100"
+          className={`absolute right-1.5 top-2.5 flex h-8 items-center justify-center gap-0.5 rounded-lg px-1.5 text-[10px] text-subtle hover:bg-active hover:text-fg ${
+            menuOpen ? "bg-active text-fg" : ""
           }`}
         >
-          <Icon name="grip" size={14} />
+          操作<Icon name="chevronDown" size={11} className={`transition-transform ${menuOpen ? "rotate-180" : ""}`} />
         </button>
 
         {menuOpen && (
@@ -316,13 +317,15 @@ function TaskMenu({ pinned, done, onClose, onTogglePin, onComplete, onEdit, onDe
     };
   }, [onClose]);
 
-  const itemClass = "flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-hover focus:bg-hover focus:outline-none";
+  const itemClass = "flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-xs hover:bg-hover focus:bg-hover focus:outline-none";
 
   return (
     <div
       ref={ref}
       role="menu"
-      className="absolute right-1 top-9 z-20 w-44 animate-pop overflow-hidden rounded-lg border border-line-strong bg-raised py-1 shadow-pop"
+      data-swipe-ignore
+      aria-label="タスクの操作"
+      className="relative z-20 grid animate-fade-in grid-cols-2 gap-1 border-t border-line bg-raised p-2"
     >
       <button role="menuitem" onClick={onComplete} className={`${itemClass} text-fg`}>
         <Icon name={done ? "undo" : "check"} size={14} />
@@ -336,7 +339,6 @@ function TaskMenu({ pinned, done, onClose, onTogglePin, onComplete, onEdit, onDe
         <Icon name="edit" size={14} />
         編集
       </button>
-      <div className="my-1 border-t border-line" />
       <button role="menuitem" onClick={onDelete} className={`${itemClass} text-bad`}>
         <Icon name="trash" size={14} />
         削除

@@ -13,8 +13,6 @@ export function CategoryTabs() {
   const setCategoryFilter = useAppStore((s) => s.setCategoryFilter);
   const categories = useMemo(() => listCategories(tasks), [tasks]);
 
-  if (categories.length === 0) return null;
-
   const tab = (active: boolean) =>
     `flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
       active ? "bg-ink text-on-ink" : "text-muted hover:bg-hover hover:text-fg"
@@ -22,20 +20,19 @@ export function CategoryTabs() {
 
   return (
     <div
-      role="tablist"
+      role="group"
       aria-label="カテゴリで絞り込み"
       className="flex min-w-0 items-center gap-1 overflow-x-auto [mask-image:linear-gradient(90deg,transparent,#000_12px,#000_calc(100%-16px),transparent)] [scrollbar-width:none] px-3"
     >
-      <button role="tab" aria-selected={categoryFilter === null} onClick={() => setCategoryFilter(null)} className={tab(categoryFilter === null)}>
-        すべて
+      <button aria-pressed={categoryFilter === null} onClick={() => setCategoryFilter(null)} className={tab(categoryFilter === null)}>
+        すべてのタスク <span className="opacity-70 tabular-nums">{tasks.length}</span>
       </button>
       {categories.map((c) => {
         const active = categoryFilter === c.name;
         return (
           <button
             key={c.name}
-            role="tab"
-            aria-selected={active}
+            aria-pressed={active}
             onClick={() => setCategoryFilter(active ? null : c.name)}
             className={tab(active)}
             title={`${c.name}（${c.count}件）`}

@@ -13,22 +13,22 @@
 :root {
   color-scheme: light;
 
-  --c-canvas: #f1f0eb; /* アプリ全体の背景（パネルの外側・上部バー） */
-  --c-sidebar: #f8f7f4; /* 左パネル */
+  --c-canvas: #f2f4f1; /* アプリ全体の背景（パネルの外側・上部バー） */
+  --c-sidebar: #f7f8f5; /* 左パネル */
   --c-surface: #ffffff; /* 中央・右パネル */
   --c-raised: #fcfcfb; /* カード・入力欄・モーダル（チャートの面と同じ） */
-  --c-hover: #efeee9;
-  --c-active: #e6e4dd;
-  --c-line: #e4e2da;
-  --c-line-strong: #cfccc1;
+  --c-hover: #edf1ed;
+  --c-active: #e0eae3;
+  --c-line: #e0e6df;
+  --c-line-strong: #bdc9c0;
 
   --c-fg: #1a1916;
   --c-muted: #55534b;
   --c-subtle: #6b695f;
 
-  --c-ink: #1a1916; /* 主ボタン */
+  --c-ink: #245c4e; /* 主ボタン */
   --c-on-ink: #fbfaf7;
-  --c-focus: #2a78d6;
+  --c-focus: #287563;
 
   --c-new: #1e7a3c; /* 未読・成功 */
   --c-new-soft: #e3f3e8;
@@ -36,8 +36,8 @@
   --c-warn-soft: #fdf0d3;
   --c-bad: #b3261e;
   --c-bad-soft: #fde9e7;
-  --c-info: #1c5cab;
-  --c-info-soft: #e4eefb;
+  --c-info: #245f51;
+  --c-info-soft: #e5f1ea;
 
   /* チャート: カテゴリ（識別）の色。順序は固定。slot 1〜8 */
   --viz-1: #2a78d6;
@@ -68,22 +68,22 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --c-canvas: #0a0a0c;
-  --c-sidebar: #0f0f12;
-  --c-surface: #131317;
-  --c-raised: #1a1a19;
-  --c-hover: #1f1f25;
-  --c-active: #28282f;
-  --c-line: #26262d;
-  --c-line-strong: #383840;
+  --c-canvas: #101713;
+  --c-sidebar: #141c17;
+  --c-surface: #18201c;
+  --c-raised: #1d2721;
+  --c-hover: #24302a;
+  --c-active: #2c3d33;
+  --c-line: #2d3931;
+  --c-line-strong: #45574b;
 
   --c-fg: #ececf1;
   --c-muted: #a3a3ad;
   --c-subtle: #8a8a95;
 
-  --c-ink: #ececf1;
-  --c-on-ink: #0a0a0c;
-  --c-focus: #5b9bf0;
+  --c-ink: #b1ddc7;
+  --c-on-ink: #14291f;
+  --c-focus: #82cbaa;
 
   --c-new: #6fdc8c;
   --c-new-soft: #14301d;
@@ -91,8 +91,8 @@
   --c-warn-soft: #33260c;
   --c-bad: #ff8a80;
   --c-bad-soft: #3a1b1a;
-  --c-info: #8fb8f5;
-  --c-info-soft: #15233a;
+  --c-info: #a1d5bd;
+  --c-info-soft: #20372c;
 
   --viz-1: #3987e5;
   --viz-2: #d95926;
@@ -280,6 +280,15 @@ select:focus-visible {
  * レイヤーの外に書くと、クラスより常に優先されてしまう。
  */
 @layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--c-line-strong) transparent;
