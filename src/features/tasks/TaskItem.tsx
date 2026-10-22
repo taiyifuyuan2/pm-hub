@@ -191,25 +191,32 @@ export function TaskItem({ task, selected, onSelect, onEdit, onDelete }: TaskIte
       >
         <button
           type="button"
+          data-swipe-ignore
+          aria-label={`${task.title}を${done ? "再開" : "完了"}する`}
+          aria-pressed={done}
+          title={done ? "クリックで再開" : "クリックで完了（元に戻せます）"}
+          onClick={() => { close(); completeTask(task.id); }}
+          className="group/avatar absolute left-2.5 top-2.5 z-10 flex size-11 items-center justify-center rounded-xl border border-transparent text-sm font-semibold text-fg transition-colors hover:border-info hover:bg-info-soft focus-visible:border-info"
+          style={{ background: "color-mix(in oklab, var(--cat) 20%, var(--c-surface))" }}
+        >
+          {done ? <Icon name="check" size={21} className="text-info" /> : <>
+            <span className="group-hover/avatar:hidden group-focus-visible/avatar:hidden">{initial}</span>
+            <Icon name="check" size={21} className="hidden text-info group-hover/avatar:block group-focus-visible/avatar:block" />
+            <span className="absolute -bottom-1 -right-1 flex size-4 items-center justify-center rounded-full border border-line bg-surface text-info"><Icon name="check" size={10} /></span>
+          </>}
+          {running && <span className="pointer-events-none absolute -inset-0.5 animate-spin-slow rounded-xl border-2 border-transparent border-t-info" />}
+        </button>
+        <button
+          type="button"
           data-task-card
           onClick={handleClick}
           aria-current={selected}
-          className={`flex w-full items-start gap-2.5 rounded-xl py-3 pl-3 pr-14 text-left transition-colors ${
+          className={`flex w-full items-start gap-2.5 rounded-xl py-3 pl-16 pr-14 text-left transition-colors ${
             selected
               ? "bg-info-soft shadow-[inset_3px_0_0_var(--c-info)]"
               : "bg-surface hover:bg-hover"
           }`}
         >
-          {/* カテゴリの色のアバター（タイトルの頭文字）。実行中は回転する輪を重ねる */}
-          <span
-            className="relative mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-fg"
-            style={{ background: "color-mix(in oklab, var(--cat) 20%, transparent)" }}
-            aria-hidden="true"
-          >
-            {initial}
-            {running && <span className="absolute -inset-0.5 animate-spin-slow rounded-[10px] border-2 border-transparent border-t-[color:var(--cat)]" />}
-          </span>
-
           <span className="min-w-0 flex-1">
             <span className="flex items-start gap-1.5">
               {unread && <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-new" aria-label="未読" />}
