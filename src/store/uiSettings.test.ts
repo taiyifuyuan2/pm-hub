@@ -98,7 +98,7 @@ describe("sanitizeUiSettings: 見た目の設定", () => {
   it("パネル幅は範囲に収め、数値でなければ既定値", () => {
     assert.equal(sanitizeUiSettings({ leftWidth: 5000 }).leftWidth, 480);
     assert.equal(sanitizeUiSettings({ leftWidth: 1 }).leftWidth, 240);
-    assert.equal(sanitizeUiSettings({ rightWidth: "400" }).rightWidth, 340);
+    assert.equal(sanitizeUiSettings({ rightWidth: "400" }).rightWidth, 460);
     assert.equal(sanitizeUiSettings({ rightWidth: 9999 }).rightWidth, 560);
   });
 

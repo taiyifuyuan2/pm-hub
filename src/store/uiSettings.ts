@@ -6,7 +6,7 @@ import { PANEL_WIDTH, clampWidth } from "../utils/layout";
 /** localStorage に保存するキー */
 export const UI_SETTINGS_KEY = "pm-hub-ui-settings";
 /** 保存形式を変えたときに上げる。古い形式は migrate で捨てる（UI 設定なので失っても困らない） */
-export const UI_SETTINGS_VERSION = 2;
+export const UI_SETTINGS_VERSION = 3;
 
 /** アプリを再起動しても保持する画面の状態。タスクやメモなどの DB のデータは含めない */
 export interface UiSettings {
@@ -39,7 +39,7 @@ export const DEFAULT_UI_SETTINGS: UiSettings = {
   searchQuery: "",
   sortBy: "created-desc",
   statusFilter: "all",
-  activeContextTab: "memo",
+  activeContextTab: "browser",
   selectedTaskId: null,
   chatModel: null,
   theme: "auto",
@@ -56,7 +56,7 @@ const SECTION_KEYS: readonly SectionKey[] = ["pinned", "unread", "active", "sche
 const MAX_CATEGORY_LENGTH = 100;
 
 const STATUS_FILTERS: readonly StatusFilter[] = ["all", "unread", "active", "scheduled", "done"];
-const CONTEXT_TABS: readonly ContextTab[] = ["memo", "browser", "messages", "project"];
+const CONTEXT_TABS: readonly ContextTab[] = ["browser", "memo", "messages", "project"];
 /** 極端に長い値で localStorage や画面を圧迫しない */
 const MAX_QUERY_LENGTH = 200;
 

@@ -8,8 +8,8 @@ import { MessagesTab } from "./MessagesTab";
 import { ProjectTab } from "./ProjectTab";
 
 const TABS: { id: ContextTab; label: string; icon: IconName }[] = [
-  { id: "memo", label: "メモ", icon: "note" },
   { id: "browser", label: "ブラウザ", icon: "globe" },
+  { id: "memo", label: "メモ", icon: "note" },
   { id: "messages", label: "メッセージ", icon: "mail" },
   { id: "project", label: "PJ", icon: "folder" },
 ];
@@ -34,7 +34,7 @@ export function ContextPanel() {
 
   return (
     <>
-      <div className="shrink-0 px-4 pb-3 pt-5">
+      <div className="shrink-0 border-b border-line bg-surface px-4 pb-2.5 pt-3.5">
         <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-fg"><Icon name="folder" size={16} />メモ・資料</div>
         <p className="text-[11px] leading-relaxed text-subtle">タスクの背景や、AIに伝えたい情報をここに。</p>
       </div>

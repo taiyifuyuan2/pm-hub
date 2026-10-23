@@ -1,7 +1,7 @@
 /** 左右パネルの幅（px）の範囲と既定値 */
 export const PANEL_WIDTH = {
   left: { min: 240, max: 480, default: 300 },
-  right: { min: 280, max: 560, default: 340 },
+  right: { min: 280, max: 560, default: 460 },
 } as const;
 
 /** 中央列（チャット）に最低限残す幅（px）。これより狭いと、タイトルや入力欄が窮屈になる */

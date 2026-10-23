@@ -53,7 +53,7 @@ export function AppLayout({ left, center, right }: AppLayoutProps) {
     [mobilePane === pane ? "flex" : "hidden", visibleOnDesktop ? "lg:flex" : "lg:hidden"].join(" ");
 
   return (
-    <div className="flex h-full flex-col bg-canvas">
+    <div className="flex h-full flex-col bg-canvas lg:p-1.5">
       <TopBar
         showLeft={showLeft}
         showRight={showRight}
@@ -66,7 +66,7 @@ export function AppLayout({ left, center, right }: AppLayoutProps) {
         }}
       />
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 overflow-hidden border-y border-line bg-surface lg:rounded-xl lg:border">
         <aside
           style={{ ["--pane-w" as string]: `${fitted.left}px` } as CSSProperties}
           aria-label="タスク一覧"

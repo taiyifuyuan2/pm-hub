@@ -30,8 +30,8 @@ export function TopBar({ showLeft, showRight, onToggleLeft, onToggleRight, onTog
   const focused = !showLeft && !showRight;
 
   return (
-    <header className="shrink-0 border-b border-line bg-surface">
-      <div className="flex h-16 items-center gap-1 px-3 sm:gap-2 sm:px-5">
+    <header className="shrink-0 border-b border-line bg-surface lg:rounded-t-xl lg:border lg:border-b-0">
+      <div className="flex h-13 items-center gap-1 px-3 sm:gap-2 sm:px-5">
       <button
         onClick={onToggleLeft}
         aria-label="左パネルの表示切替"
@@ -102,7 +102,7 @@ export function TopBar({ showLeft, showRight, onToggleLeft, onToggleRight, onTog
         <Icon name="plus" size={16} /><span className="hidden sm:inline">新規タスク</span>
       </button>
       </div>
-      <div className="flex min-h-11 items-center border-t border-line/70 bg-sidebar px-3 sm:px-5">
+      <div className="flex min-h-9 items-center border-t border-line/70 bg-sidebar px-3 sm:px-5">
         <span className="hidden shrink-0 pr-3 text-[11px] font-medium text-subtle sm:block">カテゴリ</span>
         <CategoryTabs />
         <span className="mx-2 hidden h-4 w-px shrink-0 bg-line sm:block" />
