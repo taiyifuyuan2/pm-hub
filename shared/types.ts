@@ -9,6 +9,8 @@ export interface Task {
   description: string;
   status: TaskStatus;
   category: string;
+  /** タスクを横断する仕事の単位。未設定なら個人タスクとして扱う。 */
+  project?: string;
   createdAt: string;
   scheduledAt?: string;
   /** ピン留め。タスク一覧の最上部の「Pinned」セクションに独立して表示される */
@@ -20,6 +22,13 @@ export interface Memo {
   /** Markdown 文字列 */
   content: string;
   updatedAt: string;
+}
+
+/** タスク単位の作業時間。runningSince があれば計測中。 */
+export interface TaskTime {
+  taskId: string;
+  totalSeconds: number;
+  runningSince?: string;
 }
 
 export type AiLogSender = "user" | "ai";

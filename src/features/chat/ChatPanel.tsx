@@ -15,6 +15,13 @@ import { runAgent, stopAgent } from "./runAgent";
 
 const EMPTY_LOGS: AiLog[] = [];
 
+const formatDuration = (seconds: number) => {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
+};
+
 const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
   { value: "active", label: "進行中" },
   { value: "scheduled", label: "予定" },
@@ -43,6 +50,15 @@ export function ChatPanel() {
   const [confirmAllowAll, setConfirmAllowAll] = useState(false);
   const chatModel = useAppStore((s) => s.chatModel);
   const setChatModel = useAppStore((s) => s.setChatModel);
+  const taskTime = useAppStore((s) => (task ? s.taskTimes[task.id] : undefined));
+  const setTaskTimer = useAppStore((s) => s.setTaskTimer);
+  const [nowMs, setNowMs] = useState(Date.now());
+
+  useEffect(() => {
+    if (!taskTime?.runningSince) return;
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [taskTime?.runningSince]);
 
   // このタスクの許可ルール。ルールが増減しうるのは許可カードの回答時なので、ログ件数の変化に合わせて取得し直す
   const taskId = task?.id;
@@ -97,10 +113,15 @@ export function ChatPanel() {
     const message = draft.trim();
     if (!message || running) return;
     setDraft(task.id, "");
-    void runAgent(task.id, message, chatModel);
+    const viceInstruction =
+      task.title === "Vice" && task.category === "AI相談"
+        ? `あなたはPM HubのVice（副社長）です。相談内容を整理し、既存タスクとの重複、優先順位、今すぐ取るべき次の一手を簡潔に提案してください。タスク化が有効なら、回答の末尾に必ず次の形式だけで提案タスクを添えてください。\n\n\`\`\`vice-tasks\n[{"title":"短いタスク名","category":"カテゴリー","description":"最初のアクション","scheduledOn":"YYYY-MM-DD"}]\n\`\`\`\n\n期限未定なら scheduledOn を省略します。最大5件までにしてください。外部への送信やファイル変更は、明示的な依頼がない限り行わないでください。\n\n相談内容:\n${message}`
+        : message;
+    void runAgent(task.id, viceInstruction, chatModel);
   };
 
   const accent = categoryColorVar(task.category);
+  const elapsedSeconds = (taskTime?.totalSeconds ?? 0) + (taskTime?.runningSince ? Math.max(0, Math.floor((nowMs - new Date(taskTime.runningSince).getTime()) / 1000)) : 0);
 
   const empty = (
     <div className="m-auto w-full max-w-xl shrink-0 animate-fade-in py-3">
@@ -146,6 +167,7 @@ export function ChatPanel() {
           items={[
             { label: "すべて", onClick: () => setCategoryFilter(null) },
             { label: task.category, dotColor: accent, onClick: () => setCategoryFilter(task.category) },
+            ...(task.project ? [{ label: task.project }] : []),
             { label: task.title },
           ]}
         />
@@ -155,6 +177,16 @@ export function ChatPanel() {
             {task.description && <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted">{task.description}</p>}
           </div>
           <div className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => void setTaskTimer(task.id, !taskTime?.runningSince)}
+              aria-pressed={Boolean(taskTime?.runningSince)}
+              title={taskTime?.runningSince ? "作業時間の計測を止める" : "作業時間の計測を始める"}
+              className={`flex h-8 items-center gap-1 rounded-md px-2 text-[11px] font-medium ${taskTime?.runningSince ? "bg-new-soft text-new" : "text-subtle hover:bg-hover hover:text-fg"}`}
+            >
+              <Icon name={taskTime?.runningSince ? "stop" : "clock"} size={13} />
+              <span className="tabular-nums">{formatDuration(elapsedSeconds)}</span>
+            </button>
             <button
               onClick={() => togglePin(task.id)}
               aria-label={task.isPinned ? "ピン留めを解除" : "ピン留め"}

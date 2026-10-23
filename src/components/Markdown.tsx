@@ -5,6 +5,7 @@ import { copyText } from "../lib/clipboard";
 import { BeeperDraftCard } from "./BeeperDraftCard";
 import { GmailDraftCard } from "./GmailDraftCard";
 import { Icon } from "./Icon";
+import { ViceTaskCard } from "./ViceTaskCard";
 
 /** コードブロック。右上のボタンで全体をコピーできる */
 function CodeBlock({ children }: { children: ReactNode }) {
@@ -54,6 +55,10 @@ export function Markdown({ children, className = "" }: { children: string; class
             if (code?.type === "element" && Array.isArray(code.properties?.className) && code.properties.className.includes("language-beeper-draft")) {
               const text = code.children.map((c) => (c.type === "text" ? c.value : "")).join("");
               return <BeeperDraftCard source={text} />;
+            }
+            if (code?.type === "element" && Array.isArray(code.properties?.className) && code.properties.className.includes("language-vice-tasks")) {
+              const text = code.children.map((c) => (c.type === "text" ? c.value : "")).join("");
+              return <ViceTaskCard source={text} />;
             }
             return <CodeBlock>{children}</CodeBlock>;
           },

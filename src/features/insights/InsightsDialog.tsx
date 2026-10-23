@@ -5,6 +5,7 @@ import { Icon } from "../../components/Icon";
 import { useAppStore } from "../../store/useAppStore";
 import { CategoryBars, DailyColumns, DataTables, HeroFigure, Meter, StatTile, StatusStack } from "./charts";
 import { computeTaskStats } from "./taskStats";
+import { computeWorkTimeStats, formatWorkTime } from "./workTime";
 
 type View = "chart" | "table";
 
@@ -15,7 +16,9 @@ type View = "chart" | "table";
 export function InsightsDialog({ onClose }: { onClose: () => void }) {
   const tasks = useAppStore((s) => s.tasks);
   const refreshing = useAppStore((s) => s.refreshing);
+  const taskTimes = useAppStore((s) => s.taskTimes);
   const stats = useMemo(() => computeTaskStats(tasks), [tasks]);
+  const workTime = useMemo(() => computeWorkTimeStats(tasks, taskTimes), [tasks, taskTimes]);
   const [view, setView] = useState<View>("chart");
 
   return (
@@ -76,6 +79,19 @@ export function InsightsDialog({ onClose }: { onClose: () => void }) {
             </div>
 
             <Meter ratio={stats.completionRate} label="完了率" detail={`${stats.byStatus.done} / ${stats.total} 件を完了`} />
+
+            <section aria-label="作業時間">
+              <div className="mb-2.5 flex items-baseline justify-between gap-3">
+                <h3 className="text-xs font-semibold text-fg">作業時間</h3>
+                <span className="text-xs font-semibold tabular-nums text-fg">合計 {formatWorkTime(workTime.totalSeconds)}</span>
+              </div>
+              {workTime.byCategory.length === 0 ? <p className="text-xs text-subtle">タスク詳細の時計ボタンから計測を始められます。</p> : (
+                <div className="space-y-2">
+                  {workTime.byCategory.slice(0, 5).map((row) => <div key={row.name} className="flex items-center gap-3 text-xs"><span className="w-20 truncate text-right text-muted">{row.name}</span><span className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-hover"><span className="block h-full rounded-full bg-viz-2" style={{ width: `${Math.max(4, (row.seconds / workTime.totalSeconds) * 100)}%` }} /></span><span className="w-14 text-right font-medium tabular-nums text-fg">{formatWorkTime(row.seconds)}</span></div>)}
+                </div>
+              )}
+              {workTime.runningCount > 0 && <p className="mt-2 text-[11px] text-new">● {workTime.runningCount} 件を計測中</p>}
+            </section>
 
             <section aria-label="ステータスの内訳">
               <h3 className="mb-2.5 text-xs font-semibold text-fg">ステータスの内訳</h3>

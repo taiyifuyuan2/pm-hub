@@ -66,7 +66,7 @@ export async function writeTaskContext(taskId: string, cwd: string): Promise<str
   const lines = [
     `# タスク: ${task.title}`,
     "",
-    `状態: ${task.status} / カテゴリ: ${task.category}`,
+    `状態: ${task.status} / カテゴリ: ${task.category}${task.project ? ` / プロジェクト: ${task.project}` : ""}`,
     task.description ? `\n${task.description}` : "",
     "",
     "## メモ",

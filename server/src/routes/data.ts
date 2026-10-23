@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { BootstrapResponse } from "../../../shared/agent";
-import { aiLogsRepo, memosRepo, messagesRepo, tasksRepo } from "../db/repositories";
+import { aiLogsRepo, memosRepo, messagesRepo, taskTimesRepo, tasksRepo } from "../db/repositories";
 import { isTaskRunning } from "./chat";
 import { isMemoContent, isTaskId, parseNewMessage, parseNewTask, parseTaskPatch } from "../validation";
 
@@ -13,8 +13,17 @@ dataRouter.get("/bootstrap", (_req, res) => {
     memos: memosRepo.all(),
     aiLogs: aiLogsRepo.allByTask(),
     messages: messagesRepo.allByTask(),
+    taskTimes: taskTimesRepo.all(),
   };
   res.json(body);
+});
+
+dataRouter.put("/tasks/:id/timer", (req, res) => {
+  const { id } = req.params;
+  if (!isTaskId(id)) return res.status(400).json({ error: "id が不正です" });
+  if (!tasksRepo.get(id)) return res.status(404).json({ error: "タスクが見つかりません" });
+  if (typeof req.body?.running !== "boolean") return res.status(400).json({ error: "running は真偽値にしてください" });
+  res.json(req.body.running ? taskTimesRepo.start(id) : taskTimesRepo.stop(id));
 });
 
 /** POST /api/tasks */

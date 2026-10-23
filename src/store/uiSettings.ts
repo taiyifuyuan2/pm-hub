@@ -6,7 +6,7 @@ import { PANEL_WIDTH, clampWidth } from "../utils/layout";
 /** localStorage に保存するキー */
 export const UI_SETTINGS_KEY = "pm-hub-ui-settings";
 /** 保存形式を変えたときに上げる。古い形式は migrate で捨てる（UI 設定なので失っても困らない） */
-export const UI_SETTINGS_VERSION = 1;
+export const UI_SETTINGS_VERSION = 2;
 
 /** アプリを再起動しても保持する画面の状態。タスクやメモなどの DB のデータは含めない */
 export interface UiSettings {
@@ -24,6 +24,7 @@ export interface UiSettings {
   theme: ThemePreference;
   /** 上部バーのカテゴリタブで選んだカテゴリ。null はすべて */
   categoryFilter: string | null;
+  projectFilter: string | null;
   /** 左右パネルの幅（px） */
   leftWidth: number;
   rightWidth: number;
@@ -43,6 +44,7 @@ export const DEFAULT_UI_SETTINGS: UiSettings = {
   chatModel: null,
   theme: "auto",
   categoryFilter: null,
+  projectFilter: null,
   leftWidth: PANEL_WIDTH.left.default,
   rightWidth: PANEL_WIDTH.right.default,
   // 完了したタスクは、普段は見えなくてよいので畳んでおく
@@ -93,6 +95,10 @@ export function sanitizeUiSettings(raw: unknown): UiSettings {
       typeof value.categoryFilter === "string" && value.categoryFilter.trim() !== ""
         ? value.categoryFilter.slice(0, MAX_CATEGORY_LENGTH)
         : DEFAULT_UI_SETTINGS.categoryFilter,
+    projectFilter:
+      typeof value.projectFilter === "string" && value.projectFilter.trim() !== ""
+        ? value.projectFilter.slice(0, MAX_CATEGORY_LENGTH)
+        : DEFAULT_UI_SETTINGS.projectFilter,
     leftWidth: clampWidth(value.leftWidth, PANEL_WIDTH.left.min, PANEL_WIDTH.left.max, DEFAULT_UI_SETTINGS.leftWidth),
     rightWidth: clampWidth(value.rightWidth, PANEL_WIDTH.right.min, PANEL_WIDTH.right.max, DEFAULT_UI_SETTINGS.rightWidth),
     // 配列でなければ既定、配列なら正しい項目だけを重複なく残す

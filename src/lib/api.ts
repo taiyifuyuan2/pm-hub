@@ -4,7 +4,7 @@ import type {
   PermissionResponseRequest,
   PermissionRulesResponse,
 } from "../../shared/agent";
-import type { BeeperRecipient, BeeperRecipientInput, InboxResponse, Memo, MessageSource, MessageThread, Task, WatchedChat } from "../types";
+import type { BeeperRecipient, BeeperRecipientInput, InboxResponse, Memo, MessageSource, MessageThread, Task, TaskTime, WatchedChat } from "../types";
 
 export interface GoogleStatus {
   configured: boolean;
@@ -55,6 +55,7 @@ export const api = {
   updateTask: (id: string, patch: Partial<Omit<Task, "id" | "createdAt">>) =>
     request<Task>(`/api/tasks/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(patch) }),
   deleteTask: (id: string) => request<void>(`/api/tasks/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  setTaskTimer: (id: string, running: boolean) => request<TaskTime>(`/api/tasks/${encodeURIComponent(id)}/timer`, { method: "PUT", body: JSON.stringify({ running }) }),
   respondPermission: (body: PermissionResponseRequest) =>
     request<void>("/api/chat/permission", { method: "POST", body: JSON.stringify(body) }),
   /** taskId を渡すとそのタスクのルールだけ、省略すると全タスクのルール */

@@ -2,6 +2,7 @@ import { useAppStore } from "../../store/useAppStore";
 import { NEXT_THEME, THEME_LABEL } from "../../lib/useTheme";
 import { Icon, type IconName } from "../Icon";
 import { CategoryTabs } from "./CategoryTabs";
+import { ProjectTabs } from "./ProjectTabs";
 
 const THEME_ICON: Record<"auto" | "light" | "dark", IconName> = { auto: "monitor", light: "sun", dark: "moon" };
 
@@ -25,6 +26,7 @@ export function TopBar({ showLeft, showRight, onToggleLeft, onToggleRight, onTog
   const setInsightsOpen = useAppStore((s) => s.setInsightsOpen);
   const setShortcutsOpen = useAppStore((s) => s.setShortcutsOpen);
   const requestNewTask = useAppStore((s) => s.requestNewTask);
+  const openVice = useAppStore((s) => s.openVice);
   const focused = !showLeft && !showRight;
 
   return (
@@ -53,6 +55,14 @@ export function TopBar({ showLeft, showRight, onToggleLeft, onToggleRight, onTog
       <div className="flex min-w-0 flex-1 items-center">
         <button onClick={onToggleFocus} aria-pressed={focused} title="左右のパネルを閉じて会話に集中" className={`hidden items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium lg:flex ${focused ? "bg-info-soft text-info" : "text-muted hover:bg-hover"}`}>
           <Icon name="chat" size={15} />{focused ? "全体を表示" : "集中モード"}
+        </button>
+        <button
+          onClick={openVice}
+          title="Vice に相談する"
+          aria-label="Vice に相談する"
+          className="ml-1 hidden items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium text-muted hover:bg-hover hover:text-fg sm:flex"
+        >
+          <Icon name="sparkle" size={15} />Vice
         </button>
       </div>
 
@@ -95,6 +105,8 @@ export function TopBar({ showLeft, showRight, onToggleLeft, onToggleRight, onTog
       <div className="flex min-h-11 items-center border-t border-line/70 bg-sidebar px-3 sm:px-5">
         <span className="hidden shrink-0 pr-3 text-[11px] font-medium text-subtle sm:block">カテゴリ</span>
         <CategoryTabs />
+        <span className="mx-2 hidden h-4 w-px shrink-0 bg-line sm:block" />
+        <ProjectTabs />
       </div>
     </header>
   );

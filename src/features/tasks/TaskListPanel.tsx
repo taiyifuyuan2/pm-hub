@@ -8,6 +8,7 @@ import type { Task, TaskStatus } from "../../types";
 import { formatToday } from "../../utils/format";
 import { groupTasksForList, matchesQuery, type StatusFilter } from "./filterTasks";
 import { QuickAdd } from "./QuickAdd";
+import { AgentQueue } from "./AgentQueue";
 import { StatusStrip } from "./StatusStrip";
 import { TaskFilterBar } from "./TaskFilterBar";
 import { TaskFormDialog } from "./TaskFormDialog";
@@ -46,6 +47,8 @@ export function TaskListPanel() {
   const setStatusFilter = useAppStore((s) => s.setStatusFilter);
   const categoryFilter = useAppStore((s) => s.categoryFilter);
   const setCategoryFilter = useAppStore((s) => s.setCategoryFilter);
+  const projectFilter = useAppStore((s) => s.projectFilter);
+  const setProjectFilter = useAppStore((s) => s.setProjectFilter);
 
   // ショートカット（Ctrl+N）や上部のボタンからの「新規タスク」の要求
   useEffect(() => {
@@ -57,12 +60,12 @@ export function TaskListPanel() {
   // 絞り込み → 検索 → 並べ替え を行い、ピン留めしたタスク（Pinned）とステータスごとのセクションに振り分ける
   const sectionsToShow = SECTIONS.filter((s) => statusFilter === "all" || s.status === statusFilter);
   const { pinned, byStatus: visibleBySection } = useMemo(
-    () => groupTasksForList(tasks, { status: statusFilter, query, sortBy, category: categoryFilter }),
-    [tasks, statusFilter, query, sortBy, categoryFilter],
+    () => groupTasksForList(tasks, { status: statusFilter, query, sortBy, category: categoryFilter, project: projectFilter }),
+    [tasks, statusFilter, query, sortBy, categoryFilter, projectFilter],
   );
   // タブの件数は、ステータスでは絞らず、検索キーワードとカテゴリだけを反映する
   const counts = useMemo(() => {
-    const matched = tasks.filter((t) => (categoryFilter === null || t.category === categoryFilter) && matchesQuery(t, query));
+    const matched = tasks.filter((t) => (categoryFilter === null || t.category === categoryFilter) && (projectFilter === null || t.project === projectFilter) && matchesQuery(t, query));
     return {
       all: matched.length,
       unread: matched.filter((t) => t.status === "unread").length,
@@ -73,7 +76,7 @@ export function TaskListPanel() {
   }, [tasks, query, categoryFilter]);
 
   const totalVisible = pinned.length + sectionsToShow.reduce((n, { status }) => n + visibleBySection[status].length, 0);
-  const isFiltering = query.trim() !== "" || statusFilter !== "all" || categoryFilter !== null;
+  const isFiltering = query.trim() !== "" || statusFilter !== "all" || categoryFilter !== null || projectFilter !== null;
 
   // 画面に出ている順（Pinned → 各セクション）。折りたたんだ中のタスクは含めない。Alt+↑/↓ の移動に使う
   const visibleOrder = useMemo(() => {
@@ -112,6 +115,7 @@ export function TaskListPanel() {
     setQuery("");
     setStatusFilter("all");
     setCategoryFilter(null);
+    setProjectFilter(null);
   };
 
   return (
@@ -144,6 +148,7 @@ export function TaskListPanel() {
       </div>
 
       <QuickAdd />
+      <AgentQueue />
       <StatusStrip />
       <TaskFilterBar
         query={query}

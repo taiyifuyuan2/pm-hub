@@ -18,7 +18,7 @@ interface InboxState {
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** 画面が見えていないときは OS の通知を出す（Tauri のみ） */
-async function notifyOs(title: string, body: string) {
+export async function notifyOs(title: string, body: string) {
   if (!("__TAURI_INTERNALS__" in window)) return;
   try {
     const n = await import("@tauri-apps/plugin-notification");

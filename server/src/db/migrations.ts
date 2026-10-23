@@ -152,6 +152,20 @@ const MIGRATIONS: { version: number; sql: string }[] = [
     version: 7,
     sql: `ALTER TABLE watched_chats ADD COLUMN taskId TEXT;`,
   },
+  {
+    version: 8,
+    sql: `
+      CREATE TABLE task_times (
+        taskId TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+        totalSeconds INTEGER NOT NULL DEFAULT 0 CHECK (totalSeconds >= 0),
+        runningSince TEXT
+      );
+    `,
+  },
+  {
+    version: 9,
+    sql: `ALTER TABLE tasks ADD COLUMN project TEXT NOT NULL DEFAULT '';`,
+  },
 ];
 
 export const LATEST_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

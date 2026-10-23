@@ -36,6 +36,7 @@ export function TaskFormDialog({ task, onClose }: { task?: Task; onClose: () => 
   const [title, setTitle] = useState(task?.title ?? "");
   // 新規作成では、カテゴリの絞り込み中ならそのカテゴリを初期値にする
   const [category, setCategory] = useState(task?.category ?? categoryFilter ?? "");
+  const [project, setProject] = useState(task?.project ?? "");
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? "active");
   const [scheduledAt, setScheduledAt] = useState(toLocalInput(task?.scheduledAt));
   const [description, setDescription] = useState(task?.description ?? "");
@@ -49,6 +50,7 @@ export function TaskFormDialog({ task, onClose }: { task?: Task; onClose: () => 
       title: title.trim(),
       description: description.trim(),
       category: category.trim() || "未分類",
+      project: project.trim() || undefined,
       status,
       // datetime-local の値はローカル時刻なので、Date 経由で ISO 文字列に直す。空なら予定日時なし
       scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
@@ -106,6 +108,11 @@ export function TaskFormDialog({ task, onClose }: { task?: Task; onClose: () => 
           />
         </div>
       </div>
+
+      <label className="block space-y-1.5">
+        <span className="text-xs font-medium text-muted">プロジェクト</span>
+        <input value={project} onChange={(e) => setProject(e.target.value)} placeholder="例: YouTube、PM Hub" className={inputClass} />
+      </label>
 
       <label className="block space-y-1.5">
         <span className="text-xs font-medium text-muted">予定日時{status === "scheduled" && " *"}</span>

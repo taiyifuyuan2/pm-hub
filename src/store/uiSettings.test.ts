@@ -13,6 +13,7 @@ describe("sanitizeUiSettings", () => {
       chatModel: "claude-sonnet-5-5",
       theme: "dark",
       categoryFilter: "開発",
+      projectFilter: null,
       leftWidth: 320,
       rightWidth: 400,
       collapsedSections: ["pinned", "done"],

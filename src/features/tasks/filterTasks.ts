@@ -33,13 +33,13 @@ const COMPARATORS: Record<SortBy, (a: Task, b: Task) => number> = {
 export function matchesQuery(task: Task, query: string): boolean {
   const keyword = normalize(query.trim());
   if (!keyword) return true;
-  return normalize(task.title).includes(keyword) || normalize(task.category).includes(keyword);
+  return normalize(task.title).includes(keyword) || normalize(task.category).includes(keyword) || normalize(task.project ?? "").includes(keyword);
 }
 
 /** ステータスの絞り込み → キーワード検索 → 並べ替え を組み合わせたタスク一覧を返す */
 export function filterAndSortTasks(
   tasks: Task[],
-  { status, query, sortBy, category = null }: { status: StatusFilter; query: string; sortBy: SortBy; category?: string | null },
+  { status, query, sortBy, category = null, project = null }: { status: StatusFilter; query: string; sortBy: SortBy; category?: string | null; project?: string | null },
 ): Task[] {
   const compare = COMPARATORS[sortBy];
   return tasks
@@ -47,6 +47,7 @@ export function filterAndSortTasks(
       (t) =>
         (status === "all" || t.status === status) &&
         (category === null || t.category === category) &&
+        (project === null || t.project === project) &&
         matchesQuery(t, query),
     )
     .sort((a, b) => compare(a, b) || time(b.createdAt) - time(a.createdAt) || a.id.localeCompare(b.id));
@@ -68,7 +69,7 @@ export interface TaskListGroups {
  */
 export function groupTasksForList(
   tasks: Task[],
-  options: { status: StatusFilter; query: string; sortBy: SortBy; category?: string | null },
+  options: { status: StatusFilter; query: string; sortBy: SortBy; category?: string | null; project?: string | null },
 ): TaskListGroups {
   const visible = filterAndSortTasks(tasks, options);
   return {

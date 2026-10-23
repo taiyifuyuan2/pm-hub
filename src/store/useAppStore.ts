@@ -6,7 +6,7 @@ import type { SortBy, StatusFilter } from "../features/tasks/filterTasks";
 import { api } from "../lib/api";
 import { toast } from "./toastStore";
 import { resolveSelectedTaskId } from "./selection";
-import type { AiLog, ContextTab, Memo, MessageThread, Task, TaskStatus } from "../types";
+import type { AiLog, ContextTab, Memo, MessageThread, Task, TaskStatus, TaskTime } from "../types";
 import {
   DEFAULT_UI_SETTINGS,
   UI_SETTINGS_KEY,
@@ -35,6 +35,7 @@ interface AppState extends UiSettings {
   aiLogs: Record<string, AiLog[]>;
   /** taskId → メッセージ（時系列順） */
   messages: Record<string, MessageThread[]>;
+  taskTimes: Record<string, TaskTime>;
 
   // ---- 画面の一時的な状態（保存しない） ----
   /** taskId → 送信前の入力（下書き）。タスクを切り替えても消えない */
@@ -48,13 +49,17 @@ interface AppState extends UiSettings {
 
   setTheme: (theme: ThemePreference) => void;
   setCategoryFilter: (category: string | null) => void;
+  setProjectFilter: (project: string | null) => void;
   setLeftWidth: (width: number) => void;
   setRightWidth: (width: number) => void;
   toggleSection: (section: SectionKey) => void;
   setDraft: (taskId: string, text: string) => void;
   setTaskRunning: (taskId: string, running: boolean) => void;
+  setTaskTimer: (taskId: string, running: boolean) => Promise<void>;
   requestNewTask: () => void;
   clearNewTaskRequest: () => void;
+  /** タスク化前の相談を受ける常設の Vice ワークスペースを開く */
+  openVice: () => void;
   /** スワイプ操作のボタンを開いているタスク（同時に1つだけ開く） */
   swipeOpenId: string | null;
   setSwipeOpen: (taskId: string | null) => void;
@@ -161,6 +166,7 @@ export const useAppStore = create<AppState>()(
       memos: {},
       aiLogs: {},
       messages: {},
+      taskTimes: {},
       drafts: {},
       runningTaskIds: [],
       memoSaveState: {},
@@ -172,6 +178,7 @@ export const useAppStore = create<AppState>()(
 
       setTheme: (theme) => set({ theme }),
       setCategoryFilter: (categoryFilter) => set({ categoryFilter }),
+      setProjectFilter: (projectFilter) => set({ projectFilter }),
       setLeftWidth: (leftWidth) => set({ leftWidth }),
       setRightWidth: (rightWidth) => set({ rightWidth }),
       toggleSection: (section) =>
@@ -196,8 +203,28 @@ export const useAppStore = create<AppState>()(
               : [...s.runningTaskIds, taskId]
             : s.runningTaskIds.filter((id) => id !== taskId),
         })),
+      setTaskTimer: async (taskId, running) => {
+        const time = await api.setTaskTimer(taskId, running);
+        set((s) => ({ taskTimes: { ...s.taskTimes, [taskId]: time } }));
+      },
       requestNewTask: () => set({ newTaskRequested: true }),
       clearNewTaskRequest: () => set({ newTaskRequested: false }),
+      openVice: () => {
+        const existing = get().tasks.find((task) => task.title === "Vice" && task.category === "AI相談");
+        if (existing) {
+          get().selectTask(existing.id);
+          return;
+        }
+        const id = get().addTask({
+          title: "Vice",
+          description: "タスク化する前の相談、優先順位付け、次の一手の整理を受ける窓口です。",
+          category: "AI相談",
+          status: "active",
+          isPinned: true,
+        });
+        toast.success("Vice を作成しました。まずは考えをそのまま投げてください。");
+        get().selectTask(id);
+      },
       setSwipeOpen: (swipeOpenId) => set({ swipeOpenId }),
       setInsightsOpen: (insightsOpen) => set({ insightsOpen }),
       setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
@@ -225,6 +252,7 @@ export const useAppStore = create<AppState>()(
               memos,
               aiLogs,
               messages: data.messages,
+              taskTimes: data.taskTimes,
               selectedTaskId: resolveSelectedTaskId(data.tasks, s.selectedTaskId),
               load: { status: "ready" },
             };
@@ -432,6 +460,7 @@ export const useAppStore = create<AppState>()(
         chatModel: state.chatModel,
         theme: state.theme,
         categoryFilter: state.categoryFilter,
+        projectFilter: state.projectFilter,
         leftWidth: state.leftWidth,
         rightWidth: state.rightWidth,
         collapsedSections: state.collapsedSections,

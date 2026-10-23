@@ -2,7 +2,9 @@ import type { ChatModelId } from "../../../shared/agent";
 import { streamChat } from "../../lib/agentClient";
 import { api } from "../../lib/api";
 import type { PermissionDecision } from "../../types";
+import { notifyOs } from "../../store/inboxStore";
 import { useAppStore } from "../../store/useAppStore";
+import { toast } from "../../store/toastStore";
 
 /** taskId → 実行中ストリームの中断用コントローラー（タスクを切り替えても実行は続く） */
 const runs = new Map<string, AbortController>();
@@ -41,6 +43,8 @@ export async function runAgent(taskId: string, message: string, model?: ChatMode
   // 書き込み中のAIテキストログ。空のうちは「考え中…」として表示される
   let currentId: string | null = null;
   let currentHasText = false;
+  let completed = false;
+  let failed = false;
 
   const openText = () => {
     currentId = store().addAiLog({ taskId, sender: "ai", message: "", status: "running" });
@@ -113,10 +117,12 @@ export async function runAgent(taskId: string, message: string, model?: ChatMode
           }
           case "done":
             closeText();
+            completed = true;
             break;
           case "error":
             closeText();
             addError(event.message);
+            failed = true;
             break;
         }
       },
@@ -124,6 +130,7 @@ export async function runAgent(taskId: string, message: string, model?: ChatMode
     );
   } catch (err) {
     closeText();
+    failed = true;
     if (controller.signal.aborted) addError("ユーザーが中断しました");
     else addError(err instanceof Error ? err.message : String(err));
   } finally {
@@ -136,5 +143,23 @@ export async function runAgent(taskId: string, message: string, model?: ChatMode
     }
     runs.delete(taskId);
     store().setTaskRunning(taskId, false);
+    // AI の完了を処理キューへ戻す。閲覧済みのタスクでも、回答を見落とさない。
+    if (completed) {
+      const task = store().tasks.find((item) => item.id === taskId);
+      if (task) {
+        if (task.status !== "done") store().updateTaskStatus(taskId, "unread");
+        if (document.hasFocus()) {
+          toast.success(`AIが「${task.title}」を完了しました`);
+        } else {
+          void notifyOs("PM Hub: AIの作業が完了", task.title);
+        }
+      }
+    } else if (failed) {
+      const task = store().tasks.find((item) => item.id === taskId);
+      if (task) {
+        if (document.hasFocus()) toast.error(`AIが「${task.title}」で停止しました`);
+        else void notifyOs("PM Hub: AIの作業が停止", task.title);
+      }
+    }
   }
 }

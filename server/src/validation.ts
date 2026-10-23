@@ -30,6 +30,10 @@ export function parseTaskPatch(body: unknown): TaskPatch | string {
     if (!isText(b.category, 100) || !b.category.trim()) return "category が不正です";
     patch.category = b.category.trim();
   }
+  if ("project" in b) {
+    if (!isText(b.project, 100)) return "project が不正です";
+    patch.project = b.project.trim() || undefined;
+  }
   if ("isPinned" in b) {
     if (typeof b.isPinned !== "boolean") return "isPinned が不正です";
     patch.isPinned = b.isPinned;
@@ -60,6 +64,7 @@ export function parseNewTask(body: unknown): Task | string {
     title: rest.title,
     description: rest.description ?? "",
     category: rest.category,
+    project: rest.project,
     status: rest.status,
     createdAt: isIsoDate(b.createdAt) ? b.createdAt : new Date().toISOString(),
     scheduledAt: rest.scheduledAt,

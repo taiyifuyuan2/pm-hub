@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { AiLog, Memo, MessageThread, Task, WatchedChat } from "../../../shared/types";
+import type { AiLog, Memo, MessageThread, Task, TaskTime, WatchedChat } from "../../../shared/types";
 import { ALLOW_ALL_TOOL, type RuleSpec } from "../agent/permissionRules";
 import { db } from "./database";
 
@@ -23,6 +23,7 @@ const toTask = (r: Row): Task => ({
   description: r.description as string,
   status: r.status as Task["status"],
   category: r.category as string,
+  project: (r.project as string) || undefined,
   createdAt: r.createdAt as string,
   scheduledAt: opt(r.scheduledAt),
   isPinned: r.isPinned === 1,
@@ -31,14 +32,14 @@ const toTask = (r: Row): Task => ({
 const selectTasks = db.prepare("SELECT * FROM tasks ORDER BY createdAt DESC");
 const selectTask = db.prepare("SELECT * FROM tasks WHERE id = ?");
 const insertTask = db.prepare(
-  `INSERT INTO tasks (id, title, description, status, category, createdAt, scheduledAt, isPinned)
-   VALUES ($id, $title, $description, $status, $category, $createdAt, $scheduledAt, $isPinned)`,
+  `INSERT INTO tasks (id, title, description, status, category, project, createdAt, scheduledAt, isPinned)
+   VALUES ($id, $title, $description, $status, $category, $project, $createdAt, $scheduledAt, $isPinned)`,
 );
 // memos / ai_sessions / ai_logs / messages は ON DELETE CASCADE で一緒に消える
 const deleteTaskStmt = db.prepare("DELETE FROM tasks WHERE id = ?");
 const updateTaskStmt = db.prepare(
   `UPDATE tasks SET title = $title, description = $description, status = $status,
-     category = $category, scheduledAt = $scheduledAt, isPinned = $isPinned
+     category = $category, project = $project, scheduledAt = $scheduledAt, isPinned = $isPinned
    WHERE id = $id`,
 );
 
@@ -50,7 +51,7 @@ export const tasksRepo = {
   },
   insert: (task: Task) => {
     // SQLite には真偽値がないため、isPinned は 0/1 で保存する
-    insertTask.run({ ...task, scheduledAt: task.scheduledAt ?? null, isPinned: task.isPinned ? 1 : 0 });
+    insertTask.run({ ...task, project: task.project ?? "", scheduledAt: task.scheduledAt ?? null, isPinned: task.isPinned ? 1 : 0 });
     return task;
   },
   update: (id: string, patch: Partial<Omit<Task, "id" | "createdAt">>) => {
@@ -63,6 +64,7 @@ export const tasksRepo = {
       description: next.description,
       status: next.status,
       category: next.category,
+      project: next.project ?? "",
       scheduledAt: next.scheduledAt ?? null,
       isPinned: next.isPinned ? 1 : 0,
     });
@@ -70,6 +72,44 @@ export const tasksRepo = {
   },
   /** 削除できたら true */
   remove: (id: string) => deleteTaskStmt.run(id).changes > 0,
+};
+
+// ---------- task times ----------
+
+const selectTaskTimes = db.prepare("SELECT * FROM task_times");
+const selectTaskTime = db.prepare("SELECT * FROM task_times WHERE taskId = ?");
+const startTaskTime = db.prepare(
+  "INSERT INTO task_times (taskId, totalSeconds, runningSince) VALUES (?, 0, ?) ON CONFLICT(taskId) DO UPDATE SET runningSince = excluded.runningSince",
+);
+const stopTaskTime = db.prepare("UPDATE task_times SET totalSeconds = totalSeconds + ?, runningSince = NULL WHERE taskId = ?");
+
+const toTaskTime = (row: Row): TaskTime => ({
+  taskId: row.taskId as string,
+  totalSeconds: row.totalSeconds as number,
+  runningSince: opt(row.runningSince),
+});
+
+export const taskTimesRepo = {
+  all: (): Record<string, TaskTime> => Object.fromEntries(selectTaskTimes.all().map((row) => {
+    const time = toTaskTime(row as Row);
+    return [time.taskId, time];
+  })),
+  get: (taskId: string) => {
+    const row = selectTaskTime.get(taskId);
+    return row ? toTaskTime(row as Row) : { taskId, totalSeconds: 0 };
+  },
+  start: (taskId: string) => {
+    const current = taskTimesRepo.get(taskId);
+    if (!current.runningSince) startTaskTime.run(taskId, now());
+    return taskTimesRepo.get(taskId);
+  },
+  stop: (taskId: string) => {
+    const current = taskTimesRepo.get(taskId);
+    if (!current.runningSince) return current;
+    const seconds = Math.max(0, Math.floor((Date.now() - new Date(current.runningSince).getTime()) / 1000));
+    stopTaskTime.run(seconds, taskId);
+    return taskTimesRepo.get(taskId);
+  },
 };
 
 // ---------- memos ----------

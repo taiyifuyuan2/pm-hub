@@ -231,6 +231,7 @@ export function TaskItem({ task, selected, onSelect, onEdit, onDelete }: TaskIte
                 <span className="size-1.5 shrink-0 rounded-full" style={{ background: "var(--cat)" }} aria-hidden="true" />
                 <span className="truncate">{task.category}</span>
               </span>
+              {task.project && <span className="max-w-24 truncate rounded-md bg-info-soft px-1.5 py-0.5 text-info">{task.project}</span>}
               {task.isPinned && <span>{STATUS_LABELS[task.status]}</span>}
               {scheduled ? (
                 <span className={`flex shrink-0 items-center gap-1 ${scheduled.overdue && !done ? "font-medium text-bad" : ""}`}>

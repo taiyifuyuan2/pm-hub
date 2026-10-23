@@ -1,5 +1,5 @@
 // フロントエンド（src/）とローカルサーバー（server/）で共有する通信プロトコル
-import type { AiLog, Memo, MessageThread, PermissionDecision, PermissionRule, Task } from "./types";
+import type { AiLog, Memo, MessageThread, PermissionDecision, PermissionRule, Task, TaskTime } from "./types";
 
 /**
  * チャットで選べるモデル。id は Claude Code CLI の --model にそのまま渡す。
@@ -81,4 +81,5 @@ export interface BootstrapResponse {
   memos: Record<string, Memo>;
   aiLogs: Record<string, AiLog[]>;
   messages: Record<string, MessageThread[]>;
+  taskTimes: Record<string, TaskTime>;
 }
