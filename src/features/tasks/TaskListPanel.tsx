@@ -10,6 +10,7 @@ import { groupTasksForList, matchesQuery, type StatusFilter } from "./filterTask
 import { QuickAdd } from "./QuickAdd";
 import { AgentQueue } from "./AgentQueue";
 import { AttentionQueue } from "./AttentionQueue";
+import { DelegationQueue } from "./DelegationQueue";
 import { StatusStrip } from "./StatusStrip";
 import { TaskFilterBar } from "./TaskFilterBar";
 import { TaskFormDialog } from "./TaskFormDialog";
@@ -150,6 +151,7 @@ export function TaskListPanel() {
 
       <QuickAdd />
       <AgentQueue />
+      <DelegationQueue />
       <AttentionQueue />
       <StatusStrip />
       <TaskFilterBar
