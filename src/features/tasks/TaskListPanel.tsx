@@ -9,6 +9,7 @@ import { formatToday } from "../../utils/format";
 import { groupTasksForList, matchesQuery, type StatusFilter } from "./filterTasks";
 import { QuickAdd } from "./QuickAdd";
 import { AgentQueue } from "./AgentQueue";
+import { AttentionQueue } from "./AttentionQueue";
 import { StatusStrip } from "./StatusStrip";
 import { TaskFilterBar } from "./TaskFilterBar";
 import { TaskFormDialog } from "./TaskFormDialog";
@@ -149,6 +150,7 @@ export function TaskListPanel() {
 
       <QuickAdd />
       <AgentQueue />
+      <AttentionQueue />
       <StatusStrip />
       <TaskFilterBar
         query={query}

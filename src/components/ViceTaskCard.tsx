@@ -16,6 +16,8 @@ export function ViceTaskCard({ source }: { source: string }) {
       title: task.title,
       category: task.category,
       description: task.description,
+      project: task.project || undefined,
+      assignee: task.assignee ?? "me",
       status: task.scheduledOn ? "scheduled" : "active",
       scheduledAt: task.scheduledOn ? new Date(`${task.scheduledOn}T09:00:00`).toISOString() : undefined,
     });

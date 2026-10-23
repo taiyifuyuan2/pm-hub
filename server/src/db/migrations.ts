@@ -166,6 +166,10 @@ const MIGRATIONS: { version: number; sql: string }[] = [
     version: 9,
     sql: `ALTER TABLE tasks ADD COLUMN project TEXT NOT NULL DEFAULT '';`,
   },
+  {
+    version: 10,
+    sql: `ALTER TABLE tasks ADD COLUMN assignee TEXT NOT NULL DEFAULT 'me' CHECK (assignee IN ('me', 'ai', 'vice'));`,
+  },
 ];
 
 export const LATEST_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

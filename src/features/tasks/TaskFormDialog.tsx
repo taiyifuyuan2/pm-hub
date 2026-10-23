@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from "react";
 import { Modal, buttonClass } from "../../components/Modal";
 import { Select } from "../../components/Select";
 import { useAppStore } from "../../store/useAppStore";
-import type { Task, TaskStatus } from "../../types";
+import type { Task, TaskAssignee, TaskStatus } from "../../types";
 import { categoryColorVar } from "../../utils/category";
 import { listCategories } from "./filterTasks";
 
@@ -11,6 +11,11 @@ const STATUS_OPTIONS: { value: TaskStatus; label: string; hint: string }[] = [
   { value: "unread", label: "未読", hint: "まだ見ていない" },
   { value: "scheduled", label: "予定", hint: "日時を決めて取り組む" },
   { value: "done", label: "完了", hint: "取り組みを終えた" },
+];
+const ASSIGNEE_OPTIONS: { value: TaskAssignee; label: string }[] = [
+  { value: "me", label: "自分" },
+  { value: "ai", label: "AI" },
+  { value: "vice", label: "Vice" },
 ];
 
 const inputClass =
@@ -37,6 +42,7 @@ export function TaskFormDialog({ task, onClose }: { task?: Task; onClose: () => 
   // 新規作成では、カテゴリの絞り込み中ならそのカテゴリを初期値にする
   const [category, setCategory] = useState(task?.category ?? categoryFilter ?? "");
   const [project, setProject] = useState(task?.project ?? "");
+  const [assignee, setAssignee] = useState<TaskAssignee>(task?.assignee ?? "me");
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? "active");
   const [scheduledAt, setScheduledAt] = useState(toLocalInput(task?.scheduledAt));
   const [description, setDescription] = useState(task?.description ?? "");
@@ -51,6 +57,7 @@ export function TaskFormDialog({ task, onClose }: { task?: Task; onClose: () => 
       description: description.trim(),
       category: category.trim() || "未分類",
       project: project.trim() || undefined,
+      assignee,
       status,
       // datetime-local の値はローカル時刻なので、Date 経由で ISO 文字列に直す。空なら予定日時なし
       scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
@@ -113,6 +120,17 @@ export function TaskFormDialog({ task, onClose }: { task?: Task; onClose: () => 
         <span className="text-xs font-medium text-muted">プロジェクト</span>
         <input value={project} onChange={(e) => setProject(e.target.value)} placeholder="例: YouTube、PM Hub" className={inputClass} />
       </label>
+
+      <div className="space-y-1.5">
+        <span className="text-xs font-medium text-muted">担当</span>
+        <Select<TaskAssignee>
+          ariaLabel="担当"
+          value={assignee}
+          onChange={setAssignee}
+          options={ASSIGNEE_OPTIONS}
+          className="h-[38px] w-full"
+        />
+      </div>
 
       <label className="block space-y-1.5">
         <span className="text-xs font-medium text-muted">予定日時{status === "scheduled" && " *"}</span>

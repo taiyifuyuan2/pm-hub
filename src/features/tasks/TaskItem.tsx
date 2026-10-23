@@ -232,6 +232,7 @@ export function TaskItem({ task, selected, onSelect, onEdit, onDelete }: TaskIte
                 <span className="truncate">{task.category}</span>
               </span>
               {task.project && <span className="max-w-24 truncate rounded-md bg-info-soft px-1.5 py-0.5 text-info">{task.project}</span>}
+              {task.assignee && <span className={`rounded-md px-1.5 py-0.5 ${task.assignee === "me" ? "bg-hover text-muted" : task.assignee === "vice" ? "bg-warn-soft text-warn" : "bg-new-soft text-new"}`}>{task.assignee === "me" ? "自分" : task.assignee === "vice" ? "Vice" : "AI"}</span>}
               {task.isPinned && <span>{STATUS_LABELS[task.status]}</span>}
               {scheduled ? (
                 <span className={`flex shrink-0 items-center gap-1 ${scheduled.overdue && !done ? "font-medium text-bad" : ""}`}>

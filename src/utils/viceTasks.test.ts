@@ -15,4 +15,10 @@ describe("parseViceTaskProposals", () => {
     assert.equal(parseViceTaskProposals('[{"category":"生活","description":"x"}]'), null);
     assert.equal(parseViceTaskProposals('[{"title":"x","category":"生活","description":"","scheduledOn":"tomorrow"}]'), null);
   });
+  it("project and assignee", () => {
+    const result = parseViceTaskProposals('[{"title":"task","category":"work","project":"PM Hub","assignee":"ai","description":"next"}]');
+    assert.equal(result?.[0].project, "PM Hub");
+    assert.equal(result?.[0].assignee, "ai");
+    assert.equal(parseViceTaskProposals('[{"title":"task","category":"work","assignee":"other","description":"next"}]'), null);
+  });
 });

@@ -2,6 +2,7 @@
 // 日時はすべて ISO 8601 文字列で保持する（SQLite / JSON への永続化を想定）
 
 export type TaskStatus = "unread" | "active" | "scheduled" | "done";
+export type TaskAssignee = "me" | "ai" | "vice";
 
 export interface Task {
   id: string;
@@ -11,6 +12,7 @@ export interface Task {
   category: string;
   /** タスクを横断する仕事の単位。未設定なら個人タスクとして扱う。 */
   project?: string;
+  assignee?: TaskAssignee;
   createdAt: string;
   scheduledAt?: string;
   /** ピン留め。タスク一覧の最上部の「Pinned」セクションに独立して表示される */
@@ -94,7 +96,7 @@ export interface MessageThread {
   timestamp: string;
 }
 
-export type ContextTab = "memo" | "browser" | "messages";
+export type ContextTab = "memo" | "browser" | "messages" | "project";
 
 /** Beeper 側で照合済みの送信先。名前だけでなく ID とサービス名も確認に使う。 */
 export interface BeeperRecipient {

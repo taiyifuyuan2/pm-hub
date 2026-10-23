@@ -5,11 +5,13 @@ import type { ContextTab } from "../../types";
 import { BrowserTab } from "./BrowserTab";
 import { MemoTab } from "./MemoTab";
 import { MessagesTab } from "./MessagesTab";
+import { ProjectTab } from "./ProjectTab";
 
 const TABS: { id: ContextTab; label: string; icon: IconName }[] = [
   { id: "memo", label: "メモ", icon: "note" },
   { id: "browser", label: "ブラウザ", icon: "globe" },
   { id: "messages", label: "メッセージ", icon: "mail" },
+  { id: "project", label: "PJ", icon: "folder" },
 ];
 
 export function ContextPanel() {
@@ -71,6 +73,7 @@ export function ContextPanel() {
             {tab === "memo" && <MemoTab taskId={task.id} />}
             {tab === "browser" && <BrowserTab />}
             {tab === "messages" && <MessagesTab taskId={task.id} />}
+            {tab === "project" && <ProjectTab task={task} />}
           </div>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">

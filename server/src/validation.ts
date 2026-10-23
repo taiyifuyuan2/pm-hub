@@ -1,10 +1,11 @@
-import type { MessageSource, Task, TaskStatus } from "../../shared/types";
+import type { MessageSource, Task, TaskAssignee, TaskStatus } from "../../shared/types";
 
 // taskId は作業ディレクトリ名にも使うので、パス区切りなどを含まない値に限定する
 export const TASK_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 export const isTaskId = (v: unknown): v is string => typeof v === "string" && TASK_ID_PATTERN.test(v);
 
 const STATUSES: readonly TaskStatus[] = ["unread", "active", "scheduled", "done"];
+const ASSIGNEES: readonly TaskAssignee[] = ["me", "ai", "vice"];
 const MAX_TEXT = 20_000;
 
 const isText = (v: unknown, max = MAX_TEXT): v is string => typeof v === "string" && v.length <= max;
@@ -33,6 +34,10 @@ export function parseTaskPatch(body: unknown): TaskPatch | string {
   if ("project" in b) {
     if (!isText(b.project, 100)) return "project が不正です";
     patch.project = b.project.trim() || undefined;
+  }
+  if ("assignee" in b) {
+    if (!ASSIGNEES.includes(b.assignee as TaskAssignee)) return "assignee が不正です";
+    patch.assignee = b.assignee as TaskAssignee;
   }
   if ("isPinned" in b) {
     if (typeof b.isPinned !== "boolean") return "isPinned が不正です";
@@ -65,6 +70,7 @@ export function parseNewTask(body: unknown): Task | string {
     description: rest.description ?? "",
     category: rest.category,
     project: rest.project,
+    assignee: rest.assignee ?? "me",
     status: rest.status,
     createdAt: isIsoDate(b.createdAt) ? b.createdAt : new Date().toISOString(),
     scheduledAt: rest.scheduledAt,

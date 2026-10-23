@@ -24,6 +24,7 @@ const toTask = (r: Row): Task => ({
   status: r.status as Task["status"],
   category: r.category as string,
   project: (r.project as string) || undefined,
+  assignee: (r.assignee as Task["assignee"]) ?? "me",
   createdAt: r.createdAt as string,
   scheduledAt: opt(r.scheduledAt),
   isPinned: r.isPinned === 1,
@@ -32,14 +33,14 @@ const toTask = (r: Row): Task => ({
 const selectTasks = db.prepare("SELECT * FROM tasks ORDER BY createdAt DESC");
 const selectTask = db.prepare("SELECT * FROM tasks WHERE id = ?");
 const insertTask = db.prepare(
-  `INSERT INTO tasks (id, title, description, status, category, project, createdAt, scheduledAt, isPinned)
-   VALUES ($id, $title, $description, $status, $category, $project, $createdAt, $scheduledAt, $isPinned)`,
+  `INSERT INTO tasks (id, title, description, status, category, project, assignee, createdAt, scheduledAt, isPinned)
+   VALUES ($id, $title, $description, $status, $category, $project, $assignee, $createdAt, $scheduledAt, $isPinned)`,
 );
 // memos / ai_sessions / ai_logs / messages は ON DELETE CASCADE で一緒に消える
 const deleteTaskStmt = db.prepare("DELETE FROM tasks WHERE id = ?");
 const updateTaskStmt = db.prepare(
   `UPDATE tasks SET title = $title, description = $description, status = $status,
-     category = $category, project = $project, scheduledAt = $scheduledAt, isPinned = $isPinned
+     category = $category, project = $project, assignee = $assignee, scheduledAt = $scheduledAt, isPinned = $isPinned
    WHERE id = $id`,
 );
 
@@ -51,7 +52,7 @@ export const tasksRepo = {
   },
   insert: (task: Task) => {
     // SQLite には真偽値がないため、isPinned は 0/1 で保存する
-    insertTask.run({ ...task, project: task.project ?? "", scheduledAt: task.scheduledAt ?? null, isPinned: task.isPinned ? 1 : 0 });
+    insertTask.run({ ...task, project: task.project ?? "", assignee: task.assignee ?? "me", scheduledAt: task.scheduledAt ?? null, isPinned: task.isPinned ? 1 : 0 });
     return task;
   },
   update: (id: string, patch: Partial<Omit<Task, "id" | "createdAt">>) => {
@@ -65,6 +66,7 @@ export const tasksRepo = {
       status: next.status,
       category: next.category,
       project: next.project ?? "",
+      assignee: next.assignee ?? "me",
       scheduledAt: next.scheduledAt ?? null,
       isPinned: next.isPinned ? 1 : 0,
     });

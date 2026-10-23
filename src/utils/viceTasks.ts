@@ -2,6 +2,8 @@ export interface ViceTaskProposal {
   title: string;
   category: string;
   description: string;
+  project?: string;
+  assignee?: "me" | "ai" | "vice";
   /** YYYY-MM-DD。期限未定なら省略 */
   scheduledOn?: string;
 }
@@ -27,9 +29,13 @@ export function parseViceTaskProposals(source: string): ViceTaskProposal[] | nul
     const category = typeof candidate.category === "string" ? candidate.category.trim() : "";
     const description = typeof candidate.description === "string" ? candidate.description.trim() : "";
     const scheduledOn = typeof candidate.scheduledOn === "string" ? candidate.scheduledOn.trim() : undefined;
+    const project = typeof candidate.project === "string" ? candidate.project.trim() : undefined;
+    const assignee = candidate.assignee;
     if (!title || title.length > MAX_FIELD_LENGTH || category.length > MAX_FIELD_LENGTH || description.length > MAX_FIELD_LENGTH) return null;
     if (scheduledOn && !/^\d{4}-\d{2}-\d{2}$/.test(scheduledOn)) return null;
-    proposals.push({ title, category: category || "未分類", description, ...(scheduledOn ? { scheduledOn } : {}) });
+    if (project && project.length > MAX_FIELD_LENGTH) return null;
+    if (assignee !== undefined && assignee !== "me" && assignee !== "ai" && assignee !== "vice") return null;
+    proposals.push({ title, category: category || "未分類", description, ...(project ? { project } : {}), ...(assignee ? { assignee } : {}), ...(scheduledOn ? { scheduledOn } : {}) });
   }
   return proposals;
 }

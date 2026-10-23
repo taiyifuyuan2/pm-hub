@@ -115,7 +115,7 @@ export function ChatPanel() {
     setDraft(task.id, "");
     const viceInstruction =
       task.title === "Vice" && task.category === "AI相談"
-        ? `あなたはPM HubのVice（副社長）です。相談内容を整理し、既存タスクとの重複、優先順位、今すぐ取るべき次の一手を簡潔に提案してください。タスク化が有効なら、回答の末尾に必ず次の形式だけで提案タスクを添えてください。\n\n\`\`\`vice-tasks\n[{"title":"短いタスク名","category":"カテゴリー","description":"最初のアクション","scheduledOn":"YYYY-MM-DD"}]\n\`\`\`\n\n期限未定なら scheduledOn を省略します。最大5件までにしてください。外部への送信やファイル変更は、明示的な依頼がない限り行わないでください。\n\n相談内容:\n${message}`
+        ? `あなたはPM HubのVice（副社長）です。相談内容を整理し、既存タスクとの重複、優先順位、今すぐ取るべき次の一手を簡潔に提案してください。タスク化が有効なら、回答の末尾に必ず次の形式だけで提案タスクを添えてください。\n\n\`\`\`vice-tasks\n[{"title":"短いタスク名","category":"カテゴリー","project":"プロジェクト名","assignee":"me | ai | vice","description":"最初のアクション","scheduledOn":"YYYY-MM-DD"}]\n\`\`\`\n\n期限未定なら scheduledOn を省略します。project は既存プロジェクトがあれば指定し、なければ省略します。assignee は実行担当を me / ai / vice から指定します。最大5件までにしてください。外部への送信やファイル変更は、明示的な依頼がない限り行わないでください。\n\n相談内容:\n${message}`
         : message;
     void runAgent(task.id, viceInstruction, chatModel);
   };

@@ -56,7 +56,7 @@ const SECTION_KEYS: readonly SectionKey[] = ["pinned", "unread", "active", "sche
 const MAX_CATEGORY_LENGTH = 100;
 
 const STATUS_FILTERS: readonly StatusFilter[] = ["all", "unread", "active", "scheduled", "done"];
-const CONTEXT_TABS: readonly ContextTab[] = ["memo", "browser", "messages"];
+const CONTEXT_TABS: readonly ContextTab[] = ["memo", "browser", "messages", "project"];
 /** 極端に長い値で localStorage や画面を圧迫しない */
 const MAX_QUERY_LENGTH = 200;
 
