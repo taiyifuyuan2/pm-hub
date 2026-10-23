@@ -204,7 +204,7 @@ export function TaskItem({ task, selected, onSelect, onEdit, onDelete }: TaskIte
             <Icon name="check" size={21} className="hidden text-info group-hover/avatar:block group-focus-visible/avatar:block" />
             <span className="absolute -bottom-1 -right-1 flex size-4 items-center justify-center rounded-full border border-line bg-surface text-info"><Icon name="check" size={10} /></span>
           </>}
-          {running && <span className="pointer-events-none absolute -inset-0.5 animate-spin-slow rounded-xl border-2 border-transparent border-t-info" />}
+          {running && <span aria-hidden="true" className="pointer-events-none absolute -inset-1 animate-breathe rounded-[14px] border-2 border-info" />}
         </button>
         <button
           type="button"
