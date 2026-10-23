@@ -7,10 +7,10 @@ import { categoryColorVar } from "../../utils/category";
 import { listCategories } from "./filterTasks";
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string; hint: string }[] = [
-  { value: "active", label: "Active", hint: "いま取り組む" },
-  { value: "unread", label: "Unread", hint: "まだ見ていない" },
-  { value: "scheduled", label: "Scheduled", hint: "日時を決めて取り組む" },
-  { value: "done", label: "Done", hint: "完了" },
+  { value: "active", label: "進行中", hint: "いま取り組む" },
+  { value: "unread", label: "未読", hint: "まだ見ていない" },
+  { value: "scheduled", label: "予定", hint: "日時を決めて取り組む" },
+  { value: "done", label: "完了", hint: "取り組みを終えた" },
 ];
 
 const inputClass =
@@ -116,7 +116,7 @@ export function TaskFormDialog({ task, onClose }: { task?: Task; onClose: () => 
           aria-invalid={needsSchedule}
           className={inputClass}
         />
-        {needsSchedule && <span className="block text-xs text-warn">Scheduled にするには、予定日時を選んでください</span>}
+        {needsSchedule && <span className="block text-xs text-warn">「予定」にするには、予定日時を選んでください</span>}
       </label>
 
       <label className="block space-y-1.5">

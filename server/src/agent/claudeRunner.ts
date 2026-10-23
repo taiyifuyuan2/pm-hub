@@ -40,6 +40,12 @@ export const runClaude: AgentRunner = async ({ taskId, message, model, emit, req
   if (knownSession) args.push("--resume", knownSession);
   if (config.permissionMode) args.push("--permission-mode", config.permissionMode);
 
+  // 外部 API を含む準備は起動前に終える。起動後に await すると、監視の登録前に
+  // CLI が終了して error / close を取り逃がすことがある。
+  const hint = await writeTaskContext(taskId, cwd).catch(() => null);
+  if (signal.aborted) return;
+  const content = hint ? `${hint}\n\n${message}` : message;
+
   // Windows では claude.cmd を実行するため shell が必要。Node 24 は shell と引数配列の併用を非推奨とするため
   // 1本のコマンド文字列で渡す。引数は固定値と検証済みの値（UUID・許可モード）だけで、ユーザー入力は含まない。
   const child = isWindows
@@ -52,11 +58,6 @@ export const runClaude: AgentRunner = async ({ taskId, message, model, emit, req
   const send = (payload: unknown) => {
     if (child.stdin.writable) child.stdin.write(`${JSON.stringify(payload)}\n`);
   };
-
-  // メモ・メッセージを作業フォルダに書き出し、場所を知らせる一文を指示の前に付ける（ログには元の指示だけが残る）
-  const hint = await writeTaskContext(taskId, cwd).catch(() => null);
-  const content = hint ? `${hint}\n\n${message}` : message;
-  send({ type: "user", message: { role: "user", content }, parent_tool_use_id: null });
 
   const parser = createStreamJsonParser({
     emit,
@@ -71,7 +72,7 @@ export const runClaude: AgentRunner = async ({ taskId, message, model, emit, req
     stderr += chunk.toString();
   });
 
-  await new Promise<void>((resolve) => {
+  const completion = new Promise<void>((resolve) => {
     child.on("error", (err: NodeJS.ErrnoException) => {
       emit({
         type: "error",
@@ -101,6 +102,8 @@ export const runClaude: AgentRunner = async ({ taskId, message, model, emit, req
       resolve();
     });
   });
+  send({ type: "user", message: { role: "user", content }, parent_tool_use_id: null });
+  await completion;
 };
 
 /** CLI からの control_request に答える。can_use_tool はユーザーの回答を待つ */

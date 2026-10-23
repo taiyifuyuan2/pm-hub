@@ -16,13 +16,17 @@ import { runAgent, stopAgent } from "./runAgent";
 const EMPTY_LOGS: AiLog[] = [];
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
-  { value: "active", label: "Active" },
-  { value: "scheduled", label: "Scheduled" },
-  { value: "done", label: "Done" },
+  { value: "active", label: "進行中" },
+  { value: "scheduled", label: "予定" },
+  { value: "done", label: "完了" },
 ];
 
 /** 会話の最初の一言の候補。押すと入力欄に入る（送信はしない） */
-const SUGGESTIONS = ["このタスクの進め方を提案して", "メモの内容を要約して", "次にやることを3つ挙げて"];
+const SUGGESTIONS = [
+  { icon: "list", title: "進め方を整理", description: "ゴールまでの手順を考える", prompt: "このタスクの進め方を提案して" },
+  { icon: "note", title: "メモを要約", description: "大事なポイントを取り出す", prompt: "メモの内容を要約して" },
+  { icon: "check", title: "次の一歩を決める", description: "今やることを明確にする", prompt: "次にやることを3つ挙げて" },
+] as const;
 
 export function ChatPanel() {
   const task = useSelectedTask();
@@ -72,17 +76,22 @@ export function ChatPanel() {
   if (!task) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-        <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-hover text-subtle">
-          <Icon name="chat" size={22} />
+        <div className="mb-5 flex size-16 items-center justify-center rounded-2xl border border-new/20 bg-new-soft text-new">
+          <Icon name="chat" size={28} />
         </div>
-        <p className="text-sm font-medium text-fg">タスクを選んでください</p>
-        <p className="mt-1 text-xs text-subtle">左の一覧から選ぶと、紐づくAIエージェントとの会話がここに表示されます</p>
+        <p className="text-lg font-semibold text-fg">タスクから、次の一歩へ。</p>
+        <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">一覧からタスクを選ぶと、Claude と相談しながら作業を進められます。</p>
+        <div className="mt-6 flex items-center gap-2 rounded-full border border-line bg-raised px-4 py-2 text-xs text-subtle">
+          <Icon name="panelLeft" size={14} />
+          タスクを選んで会話をはじめる
+        </div>
       </div>
     );
   }
 
   // 許可確認の回答待ち（pending）も実行中として扱う
   const running = logs.some((l) => l.status === "running" || l.status === "pending");
+  const pendingPermission = logs.find((l) => l.kind === "permission" && l.status === "pending");
 
   const send = () => {
     const message = draft.trim();
@@ -94,34 +103,45 @@ export function ChatPanel() {
   const accent = categoryColorVar(task.category);
 
   const empty = (
-    <div className="m-auto flex max-w-sm animate-fade-in flex-col items-center py-8 text-center">
-      <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-hover text-fg">
+    <div className="m-auto w-full max-w-xl shrink-0 animate-fade-in py-3">
+      <div className="mb-3 flex size-11 items-center justify-center rounded-2xl border border-new/20 bg-new-soft text-new shadow-sm">
         <Icon name="sparkle" size={22} />
       </div>
-      <p className="text-sm font-semibold text-fg">このタスクについて、Claude に頼んでみましょう</p>
-      <p className="mt-1 text-xs leading-relaxed text-subtle">
-        下の入力欄から指示を送ると、このタスク専用のフォルダで作業し、会話は次回以降も引き継がれます。
+      <p className="text-[11px] font-semibold tracking-[0.16em] text-new">CLAUDE WORKSPACE</p>
+      <h2 className="mt-2 text-2xl font-semibold leading-snug tracking-tight text-fg">どこから、進めましょう？</h2>
+      <p className="mt-2 max-w-md text-sm leading-6 text-muted">
+        計画の整理から具体的な作業まで。このタスクのメモをもとに相談でき、会話の続きはいつでも再開できます。
       </p>
-      <div className="mt-4 flex flex-wrap justify-center gap-2">
+      <div className="mt-5 grid gap-2 min-[1200px]:grid-cols-3">
         {SUGGESTIONS.map((s) => (
           <button
-            key={s}
+            key={s.title}
+            type="button"
             onClick={() => {
-              setDraft(task.id, s);
+              setDraft(task.id, draft.trim() ? `${draft.trimEnd()}\n${s.prompt}` : s.prompt);
               document.getElementById("chat-input")?.focus();
             }}
-            className="rounded-full border border-line-strong bg-raised px-3 py-1.5 text-xs text-muted transition-colors hover:border-subtle hover:text-fg"
+            aria-label={`${s.title}：入力欄に追加`}
+            className="group flex items-center gap-3 rounded-xl border border-line bg-raised p-3 text-left transition-colors hover:border-new/40 hover:bg-new-soft/40 min-[1200px]:flex-col min-[1200px]:items-start min-[1200px]:gap-2"
           >
-            {s}
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-hover text-muted transition-colors group-hover:bg-new-soft group-hover:text-new">
+              <Icon name={s.icon} size={18} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium text-fg">{s.title}</span>
+              <span className="mt-0.5 block text-xs text-subtle">{s.description}</span>
+            </span>
+            <Icon name="chevronRight" size={16} className="shrink-0 text-subtle group-hover:text-new min-[1200px]:hidden" />
           </button>
         ))}
       </div>
+      <p className="mt-3 flex items-center gap-1.5 text-[11px] text-subtle"><Icon name="edit" size={12} /> 選ぶと入力欄に追加されます。編集してから送信できます。</p>
     </div>
   );
 
   return (
     <>
-      <div className="shrink-0 border-b border-line px-5 pb-3 pt-3">
+      <div className="shrink-0 border-b border-line bg-surface px-5 pb-4 pt-4">
         <Breadcrumbs
           items={[
             { label: "すべて", onClick: () => setCategoryFilter(null) },
@@ -129,9 +149,9 @@ export function ChatPanel() {
             { label: task.title },
           ]}
         />
-        <div className="mt-1.5 flex flex-wrap items-start gap-x-3 gap-y-2">
+        <div className="mt-3 flex flex-wrap items-start gap-x-3 gap-y-2">
           <div className="min-w-[12rem] flex-1">
-            <h1 className="truncate text-lg font-semibold leading-snug text-fg">{task.title}</h1>
+            <h1 className="truncate text-xl font-semibold leading-snug tracking-tight text-fg" title={task.title}>{task.title}</h1>
             {task.description && <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted">{task.description}</p>}
           </div>
           <div className="flex shrink-0 items-center gap-1">
@@ -163,13 +183,19 @@ export function ChatPanel() {
               value={task.status}
               onChange={(s) => updateTaskStatus(task.id, s)}
               options={[
-                ...(task.status === "unread" ? [{ value: "unread" as const, label: "Unread" }] : []),
+                ...(task.status === "unread" ? [{ value: "unread" as const, label: "未読" }] : []),
                 ...STATUS_OPTIONS,
               ]}
               menuMinWidth={140}
               className="w-28"
             />
           </div>
+        </div>
+        <div className="mt-3 flex items-center gap-2 text-[11px] text-subtle">
+          <Icon name="sparkle" size={13} className="text-new" />
+          <span>タスク専用チャット</span>
+          <span aria-hidden="true">·</span>
+          <span>{logs.filter((log) => log.sender === "user").length} 件の依頼</span>
         </div>
       </div>
 
@@ -181,6 +207,13 @@ export function ChatPanel() {
         onSend={send}
         onStop={() => stopAgent(task.id)}
         running={running}
+        awaitingPermission={!!pendingPermission}
+        onReviewPermission={() => {
+          if (!pendingPermission) return;
+          const card = document.getElementById(`permission-${pendingPermission.id}`);
+          card?.scrollIntoView({ behavior: "smooth", block: "center" });
+          card?.focus({ preventScroll: true });
+        }}
         permissionMode={allowAll ? "allow-all" : "manual"}
         onPermissionModeChange={changePermissionMode}
         model={chatModel}

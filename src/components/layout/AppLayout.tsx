@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useAppStore } from "../../store/useAppStore";
 import { useWindowWidth } from "../../lib/useWindowWidth";
 import { PANEL_WIDTH, fitPanelWidths, maxPanelWidth } from "../../utils/layout";
@@ -17,8 +17,8 @@ interface AppLayoutProps {
 
 const PANE_TABS: Record<Pane, { label: string; icon: IconName }> = {
   left: { label: "タスク", icon: "list" },
-  center: { label: "AI", icon: "chat" },
-  right: { label: "コンテキスト", icon: "note" },
+  center: { label: "AIと進める", icon: "chat" },
+  right: { label: "メモ・資料", icon: "note" },
 };
 
 /**
@@ -35,6 +35,12 @@ export function AppLayout({ left, center, right }: AppLayoutProps) {
   const setLeftWidth = useAppStore((s) => s.setLeftWidth);
   const setRightWidth = useAppStore((s) => s.setRightWidth);
   const windowWidth = useWindowWidth();
+  const selectedTaskId = useAppStore((s) => s.selectedTaskId);
+  const previousTaskId = useRef(selectedTaskId);
+  useEffect(() => {
+    if (selectedTaskId && selectedTaskId !== previousTaskId.current && windowWidth < 1024) setMobilePane("center");
+    previousTaskId.current = selectedTaskId;
+  }, [selectedTaskId, windowWidth]);
 
   // 保存された幅は変えず、表示のときだけ、中央に最小幅を残すよう縮める（ウィンドウを広げれば元の幅に戻る）
   // いま広げられる上限。ドラッグ中は、見えている幅を基準に、この上限までしか動かさない
@@ -53,11 +59,17 @@ export function AppLayout({ left, center, right }: AppLayoutProps) {
         showRight={showRight}
         onToggleLeft={() => setShowLeft((v) => !v)}
         onToggleRight={() => setShowRight((v) => !v)}
+        onToggleFocus={() => {
+          const restore = !showLeft && !showRight;
+          setShowLeft(restore);
+          setShowRight(restore);
+        }}
       />
 
       <div className="flex min-h-0 flex-1">
         <aside
           style={{ ["--pane-w" as string]: `${fitted.left}px` } as CSSProperties}
+          aria-label="タスク一覧"
           className={`${paneClass("left", showLeft)} w-full min-w-0 flex-col bg-sidebar lg:w-(--pane-w) lg:shrink-0`}
         >
           {left}
@@ -74,7 +86,7 @@ export function AppLayout({ left, center, right }: AppLayoutProps) {
           />
         )}
 
-        <main className={`${paneClass("center", true)} min-w-0 flex-1 flex-col bg-surface`}>{center}</main>
+        <main aria-label="AIとの会話" className={`${paneClass("center", true)} min-w-0 flex-1 flex-col bg-surface`}>{center}</main>
 
         {showRight && (
           <ResizeHandle
@@ -89,6 +101,7 @@ export function AppLayout({ left, center, right }: AppLayoutProps) {
         )}
         <aside
           style={{ ["--pane-w" as string]: `${fitted.right}px` } as CSSProperties}
+          aria-label="タスクの資料"
           className={`${paneClass("right", showRight)} w-full min-w-0 flex-col bg-sidebar lg:w-(--pane-w) lg:shrink-0`}
         >
           {right}
@@ -105,8 +118,8 @@ export function AppLayout({ left, center, right }: AppLayoutProps) {
               key={pane}
               onClick={() => setMobilePane(pane)}
               aria-current={active ? "page" : undefined}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
-                active ? "text-fg" : "text-subtle hover:text-muted"
+              className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-1 border-t-2 py-2 text-[11px] font-medium ${
+                active ? "border-ink bg-info-soft text-info" : "border-transparent text-subtle hover:text-muted"
               }`}
             >
               <Icon name={PANE_TABS[pane].icon} size={18} />

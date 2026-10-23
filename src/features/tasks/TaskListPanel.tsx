@@ -14,10 +14,10 @@ import { TaskFormDialog } from "./TaskFormDialog";
 import { TaskItem } from "./TaskItem";
 
 const SECTIONS: { status: TaskStatus; label: string }[] = [
-  { status: "unread", label: "Unread" },
-  { status: "active", label: "Active" },
-  { status: "scheduled", label: "Scheduled" },
-  { status: "done", label: "Done" },
+  { status: "unread", label: "未読" },
+  { status: "active", label: "進行中" },
+  { status: "scheduled", label: "予定" },
+  { status: "done", label: "完了" },
 ];
 
 /** 開いているダイアログ */
@@ -116,17 +116,18 @@ export function TaskListPanel() {
 
   return (
     <>
-      <div className="flex shrink-0 items-center justify-between px-4 pb-2 pt-3">
+      <div className="flex shrink-0 items-center justify-between gap-2 px-4 pb-3 pt-4">
         <div>
-          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-subtle">Tasks</h2>
-          <p className="text-sm font-medium text-fg">{formatToday()}</p>
+          <p className="mb-1 text-[11px] font-medium text-subtle">{formatToday()}</p>
+          <h2 className="text-xl font-semibold tracking-tight text-fg">マイタスク</h2>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => void refresh().catch(() => {})}
             aria-label="一覧を更新"
+            disabled={refreshing}
             title="一覧を更新（一覧の一番上で下へ引っ張っても更新できます）"
-            className="rounded-md p-1.5 text-subtle hover:bg-hover hover:text-fg"
+            className="flex size-9 items-center justify-center rounded-lg text-subtle hover:bg-hover hover:text-fg disabled:opacity-50"
           >
             <Icon name="refresh" size={15} className={refreshing ? "animate-spin-slow" : ""} />
           </button>
@@ -134,9 +135,10 @@ export function TaskListPanel() {
             onClick={() => setDialog({ type: "create" })}
             aria-label="新規タスク（詳細を指定して作成）"
             title="新規タスク（Ctrl+N）"
-            className="rounded-md p-1.5 text-subtle hover:bg-hover hover:text-fg"
+            className="flex h-9 items-center gap-1 rounded-lg border border-line-strong bg-surface px-2.5 text-xs font-medium text-fg hover:bg-hover"
           >
-            <Icon name="edit" size={15} />
+            <Icon name="plus" size={15} />
+            新規
           </button>
         </div>
       </div>
@@ -151,30 +153,41 @@ export function TaskListPanel() {
         status={statusFilter}
         onStatusChange={setStatusFilter}
         counts={counts}
+        totalVisible={totalVisible}
+        totalTasks={tasks.length}
+        isFiltering={isFiltering}
       />
 
       {categoryFilter !== null && (
-        <div className="flex items-center gap-2 px-3 pt-2 text-xs text-muted">
+        <div className="flex shrink-0 items-center gap-2 px-4 pt-3 text-xs text-muted">
           カテゴリ:
           <button
             onClick={() => setCategoryFilter(null)}
-            className="flex items-center gap-1 rounded-full bg-hover px-2 py-0.5 font-medium text-fg hover:bg-active"
+            className="flex min-w-0 items-center gap-1.5 rounded-full bg-info-soft px-2.5 py-1 font-medium text-info hover:bg-hover"
             aria-label={`カテゴリ「${categoryFilter}」の絞り込みを解除`}
           >
-            {categoryFilter}
-            <Icon name="x" size={11} />
+            <span className="truncate">{categoryFilter}</span>
+            <Icon name="x" size={12} className="shrink-0" />
+          </button>
+        </div>
+      )}
+
+      {isFiltering && (
+        <div className="flex shrink-0 justify-end px-4 pt-1 text-[11px]">
+          <button onClick={resetFilters} className="flex items-center gap-1 rounded-md px-1.5 py-1 font-medium text-info hover:bg-info-soft">
+            <Icon name="x" size={12} />絞り込みを解除
           </button>
         </div>
       )}
 
       <PullToRefresh onRefresh={refresh}>
-        <div className="p-2">
+        <div className="px-3 pb-4 pt-1">
           {totalVisible === 0 && (
             <div className="flex animate-fade-in flex-col items-center px-4 py-10 text-center">
               <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-hover text-subtle">
                 <Icon name={isFiltering ? "search" : "list"} size={22} />
               </div>
-              <p className="text-sm font-medium text-fg">{isFiltering ? "該当するタスクが見つかりません" : "タスクがありません"}</p>
+              <p className="text-sm font-semibold text-fg">{isFiltering ? "一致するタスクはありません" : "最初のタスクを追加しましょう"}</p>
               <p className="mt-1 text-xs text-subtle">
                 {isFiltering ? "検索語や絞り込みを変えてみてください" : "上の入力欄に書いて、Enter で追加できます"}
               </p>
@@ -183,19 +196,24 @@ export function TaskListPanel() {
                   検索条件をリセット
                 </button>
               )}
+              {!isFiltering && (
+                <button onClick={() => setDialog({ type: "create" })} className="mt-4 flex items-center gap-1.5 rounded-lg bg-ink px-4 py-2.5 text-xs font-semibold text-on-ink hover:opacity-90">
+                  <Icon name="plus" size={14} />タスクを作成
+                </button>
+              )}
             </div>
           )}
 
           {pinned.length > 0 && (
-            <Section id="pinned" label="Pinned" count={pinned.length} collapsed={collapsedSections.includes("pinned")} onToggle={toggleSection}>
+            <Section id="pinned" label="ピン留め" count={pinned.length} collapsed={collapsedSections.includes("pinned")} onToggle={toggleSection}>
               {pinned.map(renderTask)}
             </Section>
           )}
 
           {sectionsToShow.map(({ status, label }) => {
             const sectionTasks = visibleBySection[status];
-            // 絞り込み中は、該当のないセクションを出さない
-            if (isFiltering && sectionTasks.length === 0) return null;
+            // 空のセクションを省き、取り組めるタスクを見つけやすくする
+            if (sectionTasks.length === 0) return null;
             return (
               <Section
                 key={status}
@@ -205,7 +223,7 @@ export function TaskListPanel() {
                 collapsed={collapsedSections.includes(status)}
                 onToggle={toggleSection}
               >
-                {sectionTasks.length === 0 ? <p className="px-2 py-1.5 text-xs text-subtle">タスクなし</p> : sectionTasks.map(renderTask)}
+                {sectionTasks.map(renderTask)}
               </Section>
             );
           })}
@@ -246,20 +264,21 @@ interface SectionProps {
 /** 折りたためる一覧のセクション。折りたたみの状態は再起動後も保持される */
 function Section({ id, label, count, collapsed, onToggle, children }: SectionProps) {
   return (
-    <section className="mb-2" aria-label={label}>
+    <section className="mb-4" aria-label={label}>
       <h3>
         <button
           type="button"
           onClick={() => onToggle(id)}
           aria-expanded={!collapsed}
-          className="flex w-full items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-semibold text-subtle hover:bg-hover hover:text-fg"
+          className="flex w-full items-center gap-1.5 rounded-lg px-1 py-2 text-xs font-semibold text-muted hover:bg-hover hover:text-fg"
         >
-          <Icon name="chevronDown" size={12} className={`transition-transform duration-150 ${collapsed ? "-rotate-90" : ""}`} />
+          <Icon name="chevronDown" size={13} className={`transition-transform duration-150 ${collapsed ? "-rotate-90" : ""}`} />
+          {id === "pinned" && <Icon name="pin" size={12} className="text-info" />}
           {label}
-          <span className="ml-auto font-medium tabular-nums">{count}</span>
+          <span className="ml-auto min-w-5 rounded-md bg-hover px-1.5 py-0.5 text-center text-[10px] font-medium tabular-nums text-subtle">{count}</span>
         </button>
       </h3>
-      {!collapsed && <div className="mt-0.5 animate-fade-in space-y-0.5">{children}</div>}
+      {!collapsed && <div className="mt-0.5 animate-fade-in space-y-2">{children}</div>}
     </section>
   );
 }

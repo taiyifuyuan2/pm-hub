@@ -22,7 +22,7 @@ export function StatusBar() {
   const modelLabel = CHAT_MODELS.find((m) => m.id === chatModel)?.label ?? "既定のモデル";
 
   return (
-    <footer className="hidden h-7 shrink-0 items-center gap-4 border-t border-line bg-canvas px-3 text-[11px] text-subtle lg:flex">
+    <footer className="hidden h-9 shrink-0 items-center gap-4 border-t border-line bg-surface px-5 text-[11px] text-subtle lg:flex">
       <span className="flex items-center gap-1.5" title={health ? `接続中（${health.mode === "mock" ? "モック" : "Claude Code"}）` : "サーバーに接続できません"}>
         <span className={`size-1.5 rounded-full ${health ? (health.mode === "mock" ? "bg-warn" : "bg-new") : "bg-bad"}`} aria-hidden="true" />
         {health ? (health.mode === "mock" ? "モック" : "Claude Code") : "サーバー未接続"}

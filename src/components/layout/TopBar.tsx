@@ -10,22 +10,26 @@ interface TopBarProps {
   showRight: boolean;
   onToggleLeft: () => void;
   onToggleRight: () => void;
+  onToggleFocus: () => void;
 }
 
 const iconButton =
-  "flex size-8 shrink-0 items-center justify-center rounded-lg text-subtle transition-colors hover:bg-hover hover:text-fg";
+  "flex size-9 shrink-0 items-center justify-center rounded-xl text-subtle transition-colors hover:bg-hover hover:text-fg disabled:opacity-50";
 
 /** アプリの上部バー。左右パネルの開閉、カテゴリのタブ、概要・ショートカット・テーマ・更新のボタンを持つ */
-export function TopBar({ showLeft, showRight, onToggleLeft, onToggleRight }: TopBarProps) {
+export function TopBar({ showLeft, showRight, onToggleLeft, onToggleRight, onToggleFocus }: TopBarProps) {
   const theme = useAppStore((s) => s.theme);
   const setTheme = useAppStore((s) => s.setTheme);
   const refresh = useAppStore((s) => s.refresh);
   const refreshing = useAppStore((s) => s.refreshing);
   const setInsightsOpen = useAppStore((s) => s.setInsightsOpen);
   const setShortcutsOpen = useAppStore((s) => s.setShortcutsOpen);
+  const requestNewTask = useAppStore((s) => s.requestNewTask);
+  const focused = !showLeft && !showRight;
 
   return (
-    <header className="flex h-11 shrink-0 items-center gap-1 border-b border-line bg-canvas px-2">
+    <header className="shrink-0 border-b border-line bg-surface">
+      <div className="flex h-16 items-center gap-1 px-3 sm:gap-2 sm:px-5">
       <button
         onClick={onToggleLeft}
         aria-label="左パネルの表示切替"
@@ -36,21 +40,27 @@ export function TopBar({ showLeft, showRight, onToggleLeft, onToggleRight }: Top
         <Icon name="panelLeft" size={16} />
       </button>
 
-      <div className="flex shrink-0 items-center gap-2 px-1.5">
-        <span className="flex size-6 items-center justify-center rounded-md bg-ink text-xs font-bold text-on-ink" aria-hidden="true">
-          P
+      <div className="flex shrink-0 items-center gap-2.5 pr-2 sm:pr-5">
+        <span className="flex size-9 items-center justify-center rounded-xl bg-ink text-on-ink shadow-sm" aria-hidden="true">
+          <Icon name="folder" size={20} />
         </span>
-        <span className="hidden text-sm font-semibold tracking-tight text-fg sm:inline">PM Hub</span>
+        <div>
+          <span className="block text-base font-bold tracking-tight text-fg">PM Hub</span>
+          <span className="hidden text-[10px] tracking-wide text-subtle sm:block">自分と AI のワークスペース</span>
+        </div>
       </div>
 
       <div className="flex min-w-0 flex-1 items-center">
-        <CategoryTabs />
+        <button onClick={onToggleFocus} aria-pressed={focused} title="左右のパネルを閉じて会話に集中" className={`hidden items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium lg:flex ${focused ? "bg-info-soft text-info" : "text-muted hover:bg-hover"}`}>
+          <Icon name="chat" size={15} />{focused ? "全体を表示" : "集中モード"}
+        </button>
       </div>
 
       <button
         onClick={() => void refresh().catch(() => {})}
         aria-label="更新"
         title="最新の状態に更新"
+        disabled={refreshing}
         className={iconButton}
       >
         <Icon name="refresh" size={16} className={refreshing ? "animate-spin-slow" : ""} />
@@ -78,6 +88,14 @@ export function TopBar({ showLeft, showRight, onToggleLeft, onToggleRight }: Top
       >
         <Icon name="panelRight" size={16} />
       </button>
+      <button onClick={requestNewTask} className="ml-1 flex shrink-0 items-center gap-1.5 rounded-xl bg-ink px-3 py-2.5 text-xs font-semibold text-on-ink shadow-sm transition-opacity hover:opacity-90" title="新規タスク（Ctrl+N）" aria-label="新規タスクを作成">
+        <Icon name="plus" size={16} /><span className="hidden sm:inline">新規タスク</span>
+      </button>
+      </div>
+      <div className="flex min-h-11 items-center border-t border-line/70 bg-sidebar px-3 sm:px-5">
+        <span className="hidden shrink-0 pr-3 text-[11px] font-medium text-subtle sm:block">カテゴリ</span>
+        <CategoryTabs />
+      </div>
     </header>
   );
 }
